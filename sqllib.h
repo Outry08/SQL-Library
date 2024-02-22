@@ -28,23 +28,30 @@ typedef struct {
     int numRows;
 } Table;
 
+typedef struct {
+    char* column;
+    char* comparison;
+    void* searchValue;
+} Where;
+
 Table create(char* tableName, int numCols, ...);
 //... --> char *col1Name, ...
 
 Table select(Column col, Table table, int distinct);
 Table selectWhere(Column col, Table table, int distinct, ...);
-//... --> Column *whereCol1, char *whereComparison1, void *whereValue1, ...
+//... --> Where where1, char* AND/OR, Where where2, ...
 
 void insert(Table* table, int numValues, ...);
 //... --> char *col1Name, void *value1, ...
-void update(Table* table, Column* col, void* newValue, ...);
-//... --> Column *whereCol1, char *whereComparison1, void *whereValue1, ...
+void update(Table* table, char* colName, void* newValue, ...);
+//... --> Where where1, char* AND/OR, Where where2, ...
 void delete(Table* table, ...);
-//... --> Column *whereCol1, char *whereComparison1, void *whereValue1, ...
+//... --> Where where1, char* AND/OR, Where where2, ...
 void deleteAll(Table* table);
 void freeTable(Table* table);
 
 void addColumn(Table* table, char* colName);
+Column nameToCol(Table* table, char* colName);
 
 void printTable(Table table);
 void exportString(Table table);

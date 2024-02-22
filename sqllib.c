@@ -63,7 +63,7 @@ void insert(Table* table, int numValues, ...) {
     va_list ap;
     table->numRows++;
     char* colName = "";
-    int colFound = 0;
+    Column currCol;
 
     va_start(ap, numValues);
 
@@ -79,29 +79,48 @@ void insert(Table* table, int numValues, ...) {
 
     for (int i = 0; i < numValues; i++) {
         colName = strdup(va_arg(ap, char*));
+        currCol = nameToCol(table, colName);
 
-        for (int j = 0; j < table->numCols; j++) {
-            if (strcmp(table->cols[j].name, colName) == 0) {
-                if (table->cols[j].type == CHAR)
-                    table->cols[j].values[table->numRows - 1].CHAR = va_arg(ap, char*);
-                else if (table->cols[j].type == INTEGER)
-                    table->cols[j].values[table->numRows - 1].INTEGER = va_arg(ap, int);
-                else if (table->cols[j].type == DECIMAL)
-                    table->cols[j].values[table->numRows - 1].DECIMAL = va_arg(ap, double);
-                colFound = 1;
-                break;
-            }
-        }
-
-        if (!colFound) {
+        if (currCol.type == CHAR)
+            currCol.values[table->numRows - 1].CHAR = va_arg(ap, char*);
+        else if (currCol.type == INTEGER)
+            currCol.values[table->numRows - 1].INTEGER = va_arg(ap, int);
+        else if (currCol.type == DECIMAL)
+            currCol.values[table->numRows - 1].DECIMAL = va_arg(ap, double);
+        else {
             printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
             va_arg(ap, void*);
         }
 
         free(colName);
-
     }
+
     va_end(ap);
+}
+
+
+void update(Table* table, char* colName, void* newValue, ...) {
+    va_list ap;
+
+    va_start(ap, newValue);
+
+
+}
+
+Column nameToCol(Table* table, char* colName) {
+
+    for (int i = 0; i < table->numCols; i++) {
+        if (strcmp(table->cols[i].name, colName) == 0) {
+            return table->cols[i];
+        }
+    }
+
+    Column errCol;
+    errCol.name = "COL NOT FOUND";
+    errCol.type = -1;
+    printf("Error: Failed to find column '%s'\n", colName);
+
+    return errCol;
 }
 
 void printTable(Table table) {
