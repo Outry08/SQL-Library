@@ -35,7 +35,7 @@ typedef struct {
 } Where;
 
 Table create(char* tableName, int numCols, ...); //Implemented
-//... --> char *col1Name, ...
+//... --> char *col1Name, int col1Type, ...
 
 Table select(char* colName, Table table, int distinct);
 Table selectWhere(char* colName, Table table, int distinct, int numConds, ...);
@@ -45,13 +45,14 @@ void insert(Table* table, int numValues, ...); //Implemented
 //... --> char *col1Name, void *value1, ...
 void update(Table* table, char* colName, void* newValue, int numConds, ...); //Implemented
 //... --> Where where1, char* AND/OR, Where where2, ...
-void delete(Table* table, int numConds, ...);
+void delete(Table* table, int numConds, ...); //Implemented
 //... --> Where where1, char* AND/OR, Where where2, ...
-void deleteAll(Table* table);
+void deleteAll(Table* table); //Implemented
 void freeTable(Table* table);
 
-void addColumn(Table* table, char* colName);
+void addColumn(Table* table, char* colName, int colType);
 Column nameToCol(Table* table, char* colName); //Implemented
+Column arrayToCol(char* colName, void** arr);
 
 void printTable(Table table); //Implemented
 void exportString(Table table);

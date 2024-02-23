@@ -44,11 +44,22 @@ int main(int argc, char const* argv[]) {
     update(&table, "Char Col", "WAAAAARIOOOOOO", 2, where3, '&', where4);
     printTable(table);
 
-    where3.comparison = "<>";
+    // where3.comparison = "<>";
 
-    update(&table, "Char Col", "Peach", 1, where3);
+    // update(&table, "Char Col", "Peach", 1, where3);
+    // printTable(table);
+
+    double dec = 444.0;
+
+    Where where5 = newWhere("Char Col", "==", "WAAAAARIOOOOOO");
+    Where where6 = newWhere("Decimal Col", ">", &dec);
+    Where where7 = newWhere("Decimal Col", "==", &dec);
+    Where where8 = newWhere("Integer Col", "==", &newNum);
+    where1.comparison = "!=";
+    delete(&table, 7, where5, '|', where3, '&', where6, '|', where4, '|', where1, '&', where7, '&', where8);
+
+    // deleteAll(&table);
     printTable(table);
-
 
     return 0;
 }
@@ -159,7 +170,6 @@ void update(Table* table, char* colName, void* newValue, int numConds, ...) {
     for(int i = 0; i < numConds; i++) {
         currentWhere = va_arg(ap, Where);
         for(int j = 0; j < table->numRows; j++) {
-            //Right now only stringing where statements together with AND, need OR to be incorporated.
             if(currConnect == '&' || currConnect == 'a' || currConnect == 'A') {
                 if(toUpdate[j] == 1 && !compare(nameToCol(table, currentWhere.searchColName), j, currentWhere.comparison, currentWhere.searchValue)) {
                     toUpdate[j] = 0;
@@ -203,6 +213,79 @@ void update(Table* table, char* colName, void* newValue, int numConds, ...) {
         }
     }
 
+}
+
+/**
+ * Format: delete(Table* table, int numConds, Where where1, char connective1, Where where2, ...)
+ * SQL Origin:
+ *  DELETE
+ *   FROM tableName
+ *   WHERE tableName.whereColName =, >, <, >=, <=, != whereValue
+*/
+void delete(Table* table, int numConds, ...) {
+    va_list ap;
+
+    va_start(ap, numConds);
+
+    Where currentWhere;
+    char currConnect = '\0';
+    int* prevGoodJs;
+    int numPrevGoodJs;
+
+    int toDelete[table->numRows];
+    for(int i = 0; i < table->numRows; i++)
+        toDelete[i] = 1;
+
+    for(int i = 0; i < numConds; i++) {
+        currentWhere = va_arg(ap, Where);
+        prevGoodJs = malloc(sizeof(int));
+        numPrevGoodJs = 0;
+        for(int j = 0; j < table->numRows; j++) {
+            switch(currConnect) {
+                case '&':
+                case 'a':
+                case 'A':
+                    if(toDelete[j] == 1 && !compare(nameToCol(table, currentWhere.searchColName), j, currentWhere.comparison, currentWhere.searchValue))
+                        toDelete[j] = 0;
+                    break;
+                case '|':
+                case 'o':
+                case 'O':
+                    toDelete[j] = 1;
+                case '\0':
+                    if(!compare(nameToCol(table, currentWhere.searchColName), j, currentWhere.comparison, currentWhere.searchValue))
+                        toDelete[j] = 0;
+                    break;
+                default:
+                    printf("Error: Invalid where connective '%c' provided into delete function.", currConnect);
+                    break;
+            }
+
+            if(toDelete[j] == 1) {
+                prevGoodJs = realloc(prevGoodJs, sizeof(int) * (++numPrevGoodJs));
+                prevGoodJs[numPrevGoodJs - 1] = j;
+            }
+
+        }
+        if(i < numConds - 1)
+            currConnect = va_arg(ap, int);
+
+        if((((currConnect == '|' || currConnect == 'o' || currConnect == 'O')) || (i == numConds - 1)) && (numPrevGoodJs > 0 && numPrevGoodJs <= table->numRows)) {
+            for(int k = 0; k < numPrevGoodJs; k++) {
+                for(int l = 0; l < table->numCols; l++)
+                    table->cols[l].values[prevGoodJs[k]] = table->cols[l].values[table->numRows - 1];
+                table->numRows--;
+            }
+        }
+        free(prevGoodJs);
+    }
+
+    if(numConds <= 0)
+        table->numRows = 0;
+}
+
+void deleteAll(Table* table) {
+    table->numRows = 0;
 }
 
 Column nameToCol(Table* table, char* colName) {
@@ -291,9 +374,9 @@ Where newWhere(char* searchColName, char* comparison, void* searchValue) {
     Where newWhere;
     newWhere.searchColName = strdup(searchColName);
     newWhere.comparison = strdup(comparison);
-    newWhere.searchValue = malloc(sizeof(void*));
-    memcpy(newWhere.searchValue, searchValue, sizeof(searchValue));
-    // newWhere.searchValue = searchValue;
+    // newWhere.searchValue = malloc(sizeof(void*));
+    // memcpy(newWhere.searchValue, searchValue, strlen(searchValue));
+    newWhere.searchValue = searchValue;
 
     return newWhere;
 }
