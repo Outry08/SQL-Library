@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
+#include <sqlite3.h>
+#include <time.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 typedef struct {
@@ -36,6 +38,7 @@ typedef struct {
     // int notNull; //0 or 1
     // int primaryKey; //0 or 1
     // int foreign key; //0 or 1
+    // int chained key; //0 or 1; the pointer is shared among multiple tables so that simultaneous updates aren't needed.
 } Column;
 
 typedef struct {
@@ -106,6 +109,9 @@ void freeTable(Table* table); //I fear valgrind
 
 void printTable(Table table); //Implemented
 void printTableRow(int numCols); //Implemented
+int printActionMenu(Table* table);
+int printTableMenu(int numTables, Table* tableList);
+int whereInput(Table* currentTable, Where* whereList, char* connectiveList);
 
 int getRowIndex(Table table, char* colName, void* value);
 
@@ -115,13 +121,15 @@ Date stringToDate(char* dateString);
 int isAggregate(char* name);
 char* getAggregateName(char* name);
 
+void sleep(int milliseconds);
+
 /**
  * Communication with SQL Language
 **/
 void exportString(Table table);
 void exportSQL(Table table, char* filename);
 Table importTable(char* filename);
-Table* tableMaker(void);
+Table* userTableOperator(void);
 
 /**
  * Struct and List Constructors
