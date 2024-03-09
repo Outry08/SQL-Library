@@ -75,7 +75,7 @@ Table select(Table table, Select select, int numWheres, Where* wheres, char* con
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
-void insert(Table* table, int numValues, ...); //Implemented
+void insert(Table* table, int numValues, char** colNames, void** values); //Implemented
 //... --> char *col1Name, void *value1, ...
 void update(Table* table, char* colName, void* newValue, int numWheres, Where* wheres, char* conns);
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
@@ -111,9 +111,11 @@ void printTable(Table table); //Implemented
 void printTableRow(int numCols); //Implemented
 int printActionMenu(Table* table);
 int printTableMenu(int numTables, Table* tableList);
-int whereInput(Table* currentTable, Where* whereList, char* connectiveList);
+int whereInput(Table* currentTable, Where** whereList, char** connectiveList);
+int printTypeChart(int colNum);
 
 int getRowIndex(Table table, char* colName, void* value);
+Column copyColumn(int numVals, Column col);
 
 char* dateToString(Date date);
 Date stringToDate(char* dateString);
@@ -121,6 +123,7 @@ Date stringToDate(char* dateString);
 int isAggregate(char* name);
 char* getAggregateName(char* name);
 
+void fgetsUntil(char* string, int size);
 void sleep(int milliseconds);
 
 /**
@@ -129,7 +132,7 @@ void sleep(int milliseconds);
 void exportString(Table table);
 void exportSQL(Table table, char* filename);
 Table importTable(char* filename);
-Table* userTableOperator(void);
+Table* userTableOperator(int numTables, Table* tables);
 
 /**
  * Struct and List Constructors
@@ -138,6 +141,7 @@ Where newWhere(char* searchColName, char* comparison, void* searchValue); //Impl
 Select newSelect(int numCols, char** colNames, char** orderByCols, char** groupByCols, int distinct); //Implemented
 char** nameList(int numNames, ...); //Implemented
 int* typeList(int numTypes, ...); //Implemented
+void** valueList(int numValues, int* types, ...); //Implemented
 Where* whereList(int numWheres, ...); //Implemented
 char* connectiveList(int numConns, ...); //Implemented
 Where* notWheres(int numWheres, Where* whereList); //Implemented

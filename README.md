@@ -14,8 +14,10 @@ Execute the program with ./sql
 ## Visuals
 
 ## Roadmap
-Incorporating basic SQL functions, such as SELECT, DELETE, UPDATE.
-Add the ability to import from and export to SQL files with given SQL table struct in C.
+Complete user-input table creator.
+Add DATE datatype functionality.
+Include aggregate functions, distinct, order by, and group by into select function.
+Add the ability to import from and export to SQL or db files with given SQL table struct in C.
 
 ## Project status
 Ongoing.
