@@ -59,6 +59,7 @@ int main(int argc, char const* argv[]) {
     Where where8 = newWhere("Integer Col", "==", &newNum);
     where1.comparison = "!=";
     delete(&tables[0], 7, whereList(7, where5, where3, where6, where4, where1, where7, where8), connectiveList(6, '|', '&', '|', '|', '&', '&'));
+    printTable(tables[0]);
     where3.comparison = "!=";
     delete(&tables[0], 2, whereList(2, where5, where3), connectiveList(1, '&'));
 
@@ -82,6 +83,8 @@ int main(int argc, char const* argv[]) {
     Where where9 = newWhere("Char Col", "=", "WAHHLUIGI");
 
     tables[1] = select(tables[0], select2, 2, whereList(2, where3, where9), connectiveList(1, '|'));
+
+    insertIntoRow(tables, 3, nameList(3, "Char Col", "Integer Col", "Decimal Col"), valueList(3, typeList(3, CHAR, INTEGER, DECIMAL), "Peach", 777, 19.64), 3);
 
     userTableOperator(2, tables);
 
@@ -107,12 +110,13 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes) {
     table.numCols = numCols;
     table.numRows = 0;
 
+    table.selected = 0;
+
     return table;
 
 }
 
 /**
- * Format: insert(Table *table, int numValues, char *col1Name, void *value1, char *col2Name, ...)
  * SQL Origin:
  *  INSERT
  *   INTO tableName(col1Name, col2Name, ...)
@@ -130,13 +134,14 @@ void insert(Table* table, int numValues, char** colNames, void** values) {
     Column currCol;
 
     for(int i = 0; i < table->numCols; i++) {
-        table->cols[i].values = realloc(table->cols[i].values, sizeof(Column) * table->numRows);
-        if(table->cols[i].type == CHAR)
-            table->cols[i].values[table->numRows - 1].CHAR = "NULL";
-        else if(table->cols[i].type == INTEGER)
-            table->cols[i].values[table->numRows - 1].INTEGER = 0;
-        else if(table->cols[i].type == DECIMAL)
-            table->cols[i].values[table->numRows - 1].DECIMAL = 0.0;
+        table->cols[i].values = realloc(table->cols[i].values, sizeof(ElementUnion) * table->numRows);
+        table->cols[i].values[table->numRows - 1].type = vNULL;
+        // if(table->cols[i].type == CHAR)
+        //     table->cols[i].values[table->numRows - 1].CHAR = "NULL";
+        // else if(table->cols[i].type == INTEGER)
+        //     table->cols[i].values[table->numRows - 1].INTEGER = 0;
+        // else if(table->cols[i].type == DECIMAL)
+        //     table->cols[i].values[table->numRows - 1].DECIMAL = 0.0;
     }
 
     for(int i = 0; i < numValues; i++) {
@@ -144,12 +149,72 @@ void insert(Table* table, int numValues, char** colNames, void** values) {
         currCol = nameToCol(table, colName);
 
         if(currCol.type == CHAR) {
-            currCol.values[table->numRows - 1].CHAR = (char*)values[i];
+            // printf("CHAR VAL\n");
+            currCol.values[table->numRows - 1].type = CHAR;
+            currCol.values[table->numRows - 1].CHAR = strdup((char*)values[i]);
         }
         else if(currCol.type == INTEGER) {
+            // printf("INTEGER VAL\n");
+            currCol.values[table->numRows - 1].type = INTEGER;
             currCol.values[table->numRows - 1].INTEGER = *(int*)values[i];
         }
         else if(currCol.type == DECIMAL) {
+            // printf("DECIMAL VAL\n");
+            currCol.values[table->numRows - 1].type = DATE;
+            currCol.values[table->numRows - 1].DECIMAL = *(double*)values[i];
+        }
+        else {
+            printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
+        }
+
+        free(colName);
+    }
+}
+
+void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum) {
+
+    rowNum--;
+
+    if(numValues > table->numCols) {
+        printf("Error: To many arguments provided. Insertion failed.\n");
+        return;
+    }
+    if(rowNum >= table->numRows || rowNum < 0) {
+        printf("Error: Row number out of range.\n");
+        return;
+    }
+
+    table->numRows++;
+    char* colName = "";
+    Column currCol;
+
+    for(int i = 0; i < table->numCols; i++) {
+        table->cols[i].values = realloc(table->cols[i].values, sizeof(ElementUnion) * table->numRows);
+        for(int j = table->numRows - 2; j >= rowNum; j--) {
+            memcpy(&table->cols[i].values[j + 1], &table->cols[i].values[j], sizeof(ElementUnion));
+        }
+
+        table->cols[i].values = realloc(table->cols[i].values, sizeof(ElementUnion) * table->numRows);
+        table->cols[i].values[table->numRows - 1].type = vNULL;
+    }
+
+    for(int i = 0; i < numValues; i++) {
+        colName = strdup(colNames[i]);
+        currCol = nameToCol(table, colName);
+
+        if(currCol.type == CHAR) {
+            // printf("CHAR VAL\n");
+            currCol.values[table->numRows - 1].type = CHAR;
+            currCol.values[table->numRows - 1].CHAR = strdup((char*)values[i]);
+        }
+        else if(currCol.type == INTEGER) {
+            // printf("INTEGER VAL\n");
+            currCol.values[table->numRows - 1].type = INTEGER;
+            currCol.values[table->numRows - 1].INTEGER = *(int*)values[i];
+        }
+        else if(currCol.type == DECIMAL) {
+            // printf("DECIMAL VAL\n");
+            currCol.values[table->numRows - 1].type = DATE;
             currCol.values[table->numRows - 1].DECIMAL = *(double*)values[i];
         }
         else {
@@ -173,27 +238,38 @@ void update(Table* table, char* colName, void* newValue, int numWheres, Where* w
     int numPrevGoodJs;
     int toUpdate[table->numRows];
 
+    printf("HELLO THERE\n");
+
     for(int i = 0; i < table->numRows; i++)
         toUpdate[i] = 1;
 
+    printf("YO THERE\n");
+
     for(int i = 0; i < numWheres; i++) {
+        printf("HOOOOOOOOO\n");
         prevGoodJs = malloc(sizeof(int));
         numPrevGoodJs = 0;
         for(int j = 0; j < table->numRows; j++) {
+            printf("HAAAAAA\n");
+            printf("CONNS: %c\n", conns[i]);
             switch(conns[i]) {
                 case '&':
                 case 'a':
                 case 'A':
                     if(toUpdate[j] == 1 && !compare(nameToCol(table, wheres[i].searchColName), j, wheres[i].comparison, wheres[i].searchValue))
                         toUpdate[j] = 0;
+                    printf("LLLLLLLLLLLL");
                     break;
                 case '|':
                 case 'o':
                 case 'O':
                     toUpdate[j] = 1;
+                    printf("BBBBBBBB\n");
                 case '~':
                     if(!compare(nameToCol(table, wheres[i].searchColName), j, wheres[i].comparison, wheres[i].searchValue))
                         toUpdate[j] = 0;
+
+                    printf("EEEEEEE\n");
                     break;
                 default:
                     printf("Error: Invalid where connective '%c' provided into update function.", conns[i]);
@@ -201,24 +277,34 @@ void update(Table* table, char* colName, void* newValue, int numWheres, Where* w
             }
 
             if(toUpdate[j] == 1) {
+                printf("WATCHU\n");
                 prevGoodJs = realloc(prevGoodJs, sizeof(int) * (++numPrevGoodJs));
                 prevGoodJs[numPrevGoodJs - 1] = j;
+                printf("HOBGOBLIN\n");
             }
 
         }
-
+        printf("WHAT'S GOOD THERE\n");
         if((i == numWheres - 1 || conns[i + 1] == '|' || conns[i + 1] == 'o' || conns[i + 1] == 'O') && (numPrevGoodJs > 0 && numPrevGoodJs <= table->numRows)) {
             for(int k = 0; k < numPrevGoodJs; k++) {
-                if(column.type == CHAR)
+                if(column.type == CHAR) {
+                    column.values[prevGoodJs[k]].type = CHAR;
                     column.values[prevGoodJs[k]].CHAR = (char*)newValue;
-                else if(column.type == INTEGER)
+                }
+                else if(column.type == INTEGER) {
+                    column.values[prevGoodJs[k]].type = INTEGER;
                     column.values[prevGoodJs[k]].INTEGER = *((int*)newValue);
-                else if(column.type == DECIMAL)
+                }
+                else if(column.type == DECIMAL) {
+                    column.values[prevGoodJs[k]].type = DECIMAL;
                     column.values[prevGoodJs[k]].DECIMAL = *((double*)newValue);
+                }
             }
         }
         free(prevGoodJs);
     }
+
+    printf("GOODBYE THERE\n");
 
 }
 
@@ -228,18 +314,25 @@ void update(Table* table, char* colName, void* newValue, int numWheres, Where* w
  *   FROM tableName
  *   WHERE tableName.whereColName =, >, <, >=, <=, != whereValue
 */
+
 void delete(Table* table, int numWheres, Where* wheres, char* conns) {
     int* prevGoodJs;
     int numPrevGoodJs;
 
     int toDelete[table->numRows];
-    for(int i = 0; i < table->numRows; i++)
+    for(int i = 0; i < table->numRows; i++) {
+        // printf("%d\n", i);
         toDelete[i] = 1;
+    }
 
+    // printf("%d\n", numWheres);
+    // printf("%c\n", conns[0]);
     for(int i = 0; i < numWheres; i++) {
+        // printf("HEHE\n");
         prevGoodJs = malloc(sizeof(int));
         numPrevGoodJs = 0;
         for(int j = 0; j < table->numRows; j++) {
+            // printf("BEFORE\n");
             switch(conns[i]) {
                 case '&':
                 case 'a':
@@ -270,7 +363,12 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
             for(int k = 0; k < numPrevGoodJs; k++) {
                 for(int l = 0; l < table->numCols; l++) {
                     //Keep an eye on the index calculation: prevGoodJs[k] % (table->numRows). It's working for now, but I'm not 100% confident in it.
-                    table->cols[l].values[prevGoodJs[k] % (table->numRows)] = table->cols[l].values[table->numRows - 1];
+                    // table->cols[l].values[prevGoodJs[k] % (table->numRows)] = table->cols[l].values[table->numRows - 1];
+                    //This may break. Can almost certainly be optimized. 
+                    for(int m = prevGoodJs[k] % (table->numRows); m < table->numRows - 1; m++) {
+                        printf("SHIFTING SANDLAND\n");
+                        memcpy(&table->cols[l].values[m], &table->cols[l].values[m + 1], sizeof(ElementUnion));
+                    }
                 }
                 table->numRows--;
             }
@@ -280,6 +378,8 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
 
     if(numWheres <= 0)
         table->numRows = 0;
+
+    // printf("POOOF\n");
 }
 
 void deleteAll(Table* table) {
@@ -288,30 +388,31 @@ void deleteAll(Table* table) {
 
 Table select(Table table, Select sel, int numWheres, Where* wheres, char* conns) {
 
+    Table tableCopy = copyTable(table);
+
+    if(numWheres > 0)
+        delete(&tableCopy, numWheres, notWheres(numWheres, wheres), notConnectives(numWheres - 1, conns));
+
     Table selectedTable;
 
-    if(sel.numCols == 1 && strcmp(sel.colNames[0], "*") == 0) {
-        printf("YYYYYYYYYY\n");
+    if(sel.numCols == table.numCols) {
+        // printf("YYYYYYYYYY\n");
         for(int i = 0; i < sel.numCols; i++)
-            free(sel.colNames[i]);
+            if(sel.colNames[i] != NULL)
+                free(sel.colNames[i]);
 
-        sel.numCols = table.numCols;
-        free(sel.colNames);
-        sel.colNames = malloc(sizeof(char*) * table.numCols);
-        for(int i = 0; i < table.numCols; i++) {
-            sel.colNames[i] = strdup(table.cols[i].name);
+        sel.numCols = tableCopy.numCols;
+
+        for(int i = 0; i < tableCopy.numCols; i++) {
+            sel.colNames[i] = strdup(tableCopy.cols[i].name);
         }
     }
     else {
-        printf("BHIJSKKFHJKSBFKS\n");
-        if(numWheres > 1)
-            printf("%c\n\n", conns[0]);
+        // printf("BHIJSKKFHJKSBFKS\n");
     }
-    selectedTable = selCreate(table, sel.numCols, sel.colNames);
+    selectedTable = selCreate(tableCopy, sel.numCols, sel.colNames);
 
-    printf("10 %s\n", wheres[0].searchValue);
-    delete(&selectedTable, numWheres, notWheres(numWheres, wheres), notConnectives(numWheres - 1, conns));
-    printf("11\n");
+    // printf("10\n");
 
     return selectedTable;
 }
@@ -322,66 +423,94 @@ Table select(Table table, Select sel, int numWheres, Where* wheres, char* conns)
 Table selCreate(Table baseTable, int numCols, char** colNames) {
 
     Table newTable;
-    printf("HELLO THERE\n");
+    // printf("HELLO THERE\n");
 
     newTable.name = strdup(baseTable.name);
-    printf("1\n");
+    // printf("1\n");
     strcat(newTable.name, " Select");
     newTable.cols = malloc(sizeof(Column) * numCols);
 
     newTable.numCols = numCols;
     newTable.numRows = baseTable.numRows;
 
-    int allAggs = 1;
+    // int allAggs = 1;
 
-    char* newName;
+    // char* newName;
 
     for(int i = 0; i < numCols; i++) {
         if(!isAggregate(colNames[i])) {
-            printf("2.1\n");
+            // printf("2.1\n");
             newTable.cols[i] = copyColumn(baseTable.numRows, nameToCol(&baseTable, colNames[i]));
-            newTable.cols[i].name = strdup(colNames[i]);
-            newTable.cols[i].type = nameToCol(&baseTable, colNames[i]).type;
-            allAggs = 0;
+            // newTable.cols[i].name = strdup(colNames[i]);
+            // newTable.cols[i].type = nameToCol(&baseTable, colNames[i]).type;
+
+            // allAggs = 0;
         }
-        else {
-            printf("2.2\n");
-            newName = &(strchr(colNames[i], '(')[1]);
-            for(int j = 0; j < strlen(newName); j++)
-                if(newName[j] == ')')
-                    newName[j] = '\0';
-            newTable.cols[i].values = malloc(sizeof(newTable.numRows));
-            newTable.cols[i].name = getAggregateName(colNames[i]);
-            newTable.cols[i].type = nameToCol(&baseTable, newName).type;
-        }
+        // else {
+        //     // printf("2.2\n");
+        //     newName = &(strchr(colNames[i], '(')[1]);
+        //     for(int j = 0; j < strlen(newName); j++)
+        //         if(newName[j] == ')')
+        //             newName[j] = '\0';
+        //     newTable.cols[i].values = malloc(sizeof(ElementUnion) * newTable.numRows));
+        //     newTable.cols[i].name = getAggregateName(colNames[i]);
+        //     newTable.cols[i].type = nameToCol(&baseTable, newName).type;
+        // }
     }
 
-    printf("3.0\n");
-    if(allAggs) {
-        printf("3.1\n");
-        for(int i = 0; i < numCols; i++)
-            newTable.cols[i].values = realloc(newTable.cols[i].values, 1);
-        newTable.numRows = 1;
-    }
+    // printf("3.0\n");
 
-    printf("GOODBYE THERE\n");
+    // if(allAggs) {
+    //     // printf("3.1\n");
+    //     for(int i = 0; i < numCols; i++)
+    //         newTable.cols[i].values = realloc(newTable.cols[i].values, 1);
+    //     newTable.numRows = 1;
+    // }
+
+    newTable.selected = 1;
+
+    // printf("GOODBYE THERE\n");
 
     return newTable;
 
 }
 
+Table copyTable(Table table) {
+    Table newTable;
+
+    newTable.name = strdup(table.name);
+
+    newTable.numCols = table.numCols;
+    newTable.numRows = table.numRows;
+
+    newTable.cols = malloc(sizeof(Column) * newTable.numCols);
+
+    for(int i = 0; i < newTable.numCols; i++) {
+        newTable.cols[i] = copyColumn(table.numRows, table.cols[i]);
+    }
+
+    return newTable;
+}
+
 Column copyColumn(int numVals, Column col) {
     Column colCopy;
+
+    printf("ENTERING COPYCOL\n");
 
     colCopy.name = strdup(col.name);
     colCopy.type = col.type;
     colCopy.values = malloc(sizeof(ElementUnion) * numVals);
     memcpy(colCopy.values, col.values, sizeof(ElementUnion) * numVals);
 
+    printf("EXITING COPYCOL\n");
+
     return colCopy;
 }
 
 Where* notWheres(int numWheres, Where* whereList) {
+    if(whereList == NULL || numWheres <= 0)
+        return NULL;
+
     Where* notWheres = malloc(sizeof(Where) * numWheres);
 
     for(int i = 0; i < numWheres; i++) {
@@ -394,9 +523,10 @@ Where* notWheres(int numWheres, Where* whereList) {
 }
 
 char* notConnectives(int numConns, char* conns) {
+    if(conns == NULL || numConns + 1 <= 0)
+        return NULL;
 
-    printf("%c\n\n", conns[0]);
-    char* notConns = malloc(sizeof(char) * (numConns + 2));
+    char* notConns = malloc(sizeof(char) * (numConns + 1));
     notConns[0] = '~';
     for(int i = 1; i < numConns + 1; i++) {
         switch(conns[i]) {
@@ -417,7 +547,7 @@ char* notConnectives(int numConns, char* conns) {
         }
     }
 
-    notConns[numConns + 1] = '\0';
+    // notConns[numConns + 1] = '\0';
 
     return notConns;
 }
@@ -431,7 +561,7 @@ Column nameToCol(Table* table, char* colName) {
     Column errCol;
     errCol.name = "COL NOT FOUND";
     errCol.type = -1;
-    printf("Error: Failed to find column '%s'\n", colName);
+    printf("Error: Failed to find column '%s' in table '%s'\n", colName, table->name);
 
     return errCol;
 }
@@ -446,7 +576,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
     //     printf("%lf\n", *(double*)value);
 
     if(strcmp(comparison, "=") == 0 || strcmp(comparison, "==") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 1;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) == 0;
+            else if(column.type == INTEGER)
+                return 0 == *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 == *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) == 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER == *((int*)value);
@@ -456,7 +598,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
     }
     else if(strcmp(comparison, "<") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 0;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) < 0;
+            else if(column.type == INTEGER)
+                return 0 < *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 < *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) < 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER < *((int*)value);
@@ -466,7 +620,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
     }
     else if(strcmp(comparison, "<=") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 1;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) <= 0;
+            else if(column.type == INTEGER)
+                return 0 <= *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 <= *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) <= 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER <= *((int*)value);
@@ -476,7 +642,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
     }
     else if(strcmp(comparison, ">") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 0;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) > 0;
+            else if(column.type == INTEGER)
+                return 0 > *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 > *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) > 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER > *((int*)value);
@@ -486,7 +664,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
     }
     else if(strcmp(comparison, ">=") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 1;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) >= 0;
+            else if(column.type == INTEGER)
+                return 0 >= *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 >= *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) >= 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER >= *((int*)value);
@@ -496,7 +686,19 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
     }
     else if(strcmp(comparison, "<>") == 0 || strcmp(comparison, "!=") == 0) {
-        if(column.type == CHAR)
+        if(column.values[valIndex].type == vNULL) {
+            if(value == NULL)
+                return 0;
+            else if(column.type == CHAR)
+                return strcmp("NULL", (char*)value) != 0;
+            else if(column.type == INTEGER)
+                return 0 != *((int*)value);
+            else if(column.type == DECIMAL)
+                return 0 != *((double*)value);
+            else
+                return 0;
+        }
+        else if(column.type == CHAR)
             return strcmp(column.values[valIndex].CHAR, (char*)value) != 0;
         else if(column.type == INTEGER)
             return column.values[valIndex].INTEGER != *((int*)value);
@@ -691,18 +893,21 @@ void printTable(Table table) {
         printf(" ");
     }
     printf("TABLE: %s", table.name);
-    char printString[50];
+    char printString[MAX_LEN];
 
-    printTableRow(table.numCols);
+    printTableRow(table.numCols, 0);
 
     for(int i = 0; i < table.numCols; i++)
         printf("| \e[1m%-*s\e[m", colWidth - 2, table.cols[i].name);
     printf("|");
 
     for(int i = 0; i < table.numRows; i++) {
-        printTableRow(table.numCols);
+        printTableRow(table.numCols, i + 1);
         for(int j = 0; j < table.numCols; j++) {
-            if(table.cols[j].type == CHAR) {
+            if(table.cols[j].values[i].type == vNULL)
+                printf("| %-*s ", colWidth - 3, "NULL");
+
+            else if(table.cols[j].type == CHAR) {
                 sprintf(printString, "%s", table.cols[j].values[i].CHAR);
                 if(strlen(printString) > 18) {
                     printString[18] = '\0';
@@ -726,11 +931,11 @@ void printTable(Table table) {
         printf("|");
     }
 
-    printTableRow(table.numCols);
+    printTableRow(table.numCols, 0);
     printf("\n");
 }
 
-void printTableRow(int numCols) {
+void printTableRow(int numCols, int rowNum) {
     printf("\n\t+");
     for(int j = 0; j < numCols; j++) {
         for(int k = 0; k < 22; k++) {
@@ -738,7 +943,10 @@ void printTableRow(int numCols) {
         }
         printf("+");
     }
-    printf("\n\t");
+    if(rowNum > 0)
+        printf("\n%d\t", rowNum);
+    else
+        printf("\n\t");
 }
 
 Table* userTableOperator(int numTables, Table* tables) {
@@ -748,10 +956,11 @@ Table* userTableOperator(int numTables, Table* tables) {
     int menuChoice = 1;
     int tableChoice;
 
-    char yesno[5];
+    char yesno[MAX_LEN];
 
-    char tableName[50];
+    char tableName[MAX_LEN];
     int numThings;
+    int rowNum;
 
     char** nameList = NULL;
     int* typeList = NULL;
@@ -766,14 +975,6 @@ Table* userTableOperator(int numTables, Table* tables) {
 
     while(menuChoice > 0) {
         numWheres = 0;
-        if(connectiveList != NULL) {
-            free(connectiveList);
-            connectiveList = NULL;
-        }
-        if(whereList != NULL) {
-            free(whereList);
-            whereList = NULL;
-        }
 
         menuChoice = printActionMenu(currentTable);
 
@@ -787,11 +988,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                     tables = realloc(tables, sizeof(Table) * numTables);
 
                 printf("What is the name of your new table?: ");
-                fgetsUntil(tableName, 50);
+                fgetsUntil(tableName, MAX_LEN);
 
                 printf("How many columns would you like to have?: ");
                 do {
-                    scanf("%d", &numThings);
+                    scanfWell("%d", &numThings);
                     if(numThings <= 0)
                         printf("Please input a positive number: ");
                 } while(numThings <= 0);
@@ -799,12 +1000,20 @@ Table* userTableOperator(int numTables, Table* tables) {
                 typeList = malloc(sizeof(int) * numThings);
                 for(int i = 0; i < numThings; i++) {
                     printf("Name for column #%d: ", i + 1);
-                    nameList[i] = malloc(sizeof(char) * 50);
-                    fgetsUntil(nameList[i], 50);
+                    nameList[i] = malloc(sizeof(char) * MAX_LEN);
+                    fgetsUntil(nameList[i], MAX_LEN);
                     typeList[i] = printTypeChart(i + 1);
                 }
                 tables[numTables - 1] = create(tableName, numThings, nameList, typeList);
                 currentTable = &tables[numTables - 1];
+
+                for(int i = 0; i < numThings; i++) {
+                    free(nameList[i]);
+                }
+                free(nameList);
+                free(typeList);
+                nameList = NULL;
+                typeList = NULL;
                 break;
             case 2:
                 //"2. Print a table"
@@ -839,20 +1048,34 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 printf("How many columns would you like to select?: ");
                 do {
-                    scanf("%d", &sel.numCols);
+                    scanfWell("%d", &sel.numCols);
                     if(sel.numCols <= 0)
                         printf("Please input a positive number: ");
-                } while(sel.numCols <= 0);
+                    else if(sel.numCols > currentTable->numCols)
+                        printf("Your current table doesn't have that many columns. Try again: ");
+                } while(sel.numCols <= 0 || sel.numCols > currentTable->numCols);
+
                 sel.colNames = malloc(sizeof(char*) * sel.numCols);
-                for(int i = 0; i < sel.numCols; i++) {
-                    sel.colNames[i] = malloc(sizeof(char) * 50);
-                    printf("Name for select column #%d: ", i + 1);
-                    fgetsUntil(sel.colNames[i], 50);
+                if(sel.numCols < currentTable->numCols)
+                    for(int i = 0; i < sel.numCols; i++) {
+                        sel.colNames[i] = malloc(sizeof(char) * MAX_LEN);
+
+                        do {
+                            printf("Name for select column #%d: ", i + 1);
+                            fgetsUntil(sel.colNames[i], MAX_LEN);
+                            if(nameToCol(currentTable, sel.colNames[i]).type == -1)
+                                continue;
+                            else
+                                break;
+                        } while(1);
+                    }
+                else {
+                    sel.colNames[0] = strdup("*");
                 }
 
                 printf("Would you like to filter your result with a where statement? (yes/no): ");
                 do {
-                    fgetsUntil(yesno, 5);
+                    fgetsUntil(yesno, MAX_LEN);
                     if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
                         printf("Please input 'yes' or 'no': ");
                 } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
@@ -871,7 +1094,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 printf("Do you want to omit duplicate values in this select? (yes/no): ");
                 do {
-                    fgetsUntil(yesno, 5);
+                    fgetsUntil(yesno, MAX_LEN);
                     if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
                         printf("Please input 'yes' or 'no': ");
                 } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
@@ -885,16 +1108,118 @@ Table* userTableOperator(int numTables, Table* tables) {
                 tables = realloc(tables, sizeof(Table) * numTables);
                 currentTable = &tables[tableChoice];
 
-                printf("TIME TO SELECT!\n%c\n\n", connectiveList[0]);
-
-
+                printf("TIME TO SELECT!\n");
 
                 tables[numTables - 1] = select(*currentTable, sel, numWheres, whereList, connectiveList);
                 currentTable = &tables[numTables - 1];
+                for(int i = 0; i < numWheres; i++) {
+                    free(whereList[i].comparison);
+                    free(whereList[i].searchColName);
+                    free(whereList[i].searchValue);
+                }
+                free(whereList);
+                free(connectiveList);
+                whereList = NULL;
+                connectiveList = NULL;
                 break;
 
             case 5:
                 //"5. Insert a new row into current table"
+                if(numTables <= 0) {
+                    printf("There are no tables to insert into from.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    printf("Which table would you like to insert into?\n");
+                    tableChoice = printTableMenu(numTables, tables);
+                    currentTable = &tables[tableChoice];
+                }
+
+                printf("How many columns would you like to insert into?: ");
+                do {
+                    scanfWell("%d", &numThings);
+                    if(numThings <= 0)
+                        printf("Please input a positive number: ");
+                    if(numThings > currentTable->numCols)
+                        printf("Your current table doesn't have that many columns. Try again: ");
+                } while(numThings <= 0 || numThings > currentTable->numCols);
+                nameList = malloc(sizeof(char*) * numThings);
+                valueList = malloc(sizeof(void*) * numThings);
+                if(numThings < currentTable->numCols) {
+
+                    for(int i = 0; i < numThings; i++) {
+                        nameList[i] = malloc(sizeof(char) * MAX_LEN);
+
+                        do {
+                            printf("Name for select column #%d: ", i + 1);
+                            fgetsUntil(nameList[i], MAX_LEN);
+                            if(nameToCol(currentTable, nameList[i]).type == -1)
+                                continue;
+                            else
+                                break;
+                        } while(1);
+
+                        printf("New value for %s (of type ", nameList[i]);
+                        printType(nameToCol(currentTable, nameList[i]).type);
+                        printf("): ");
+
+
+
+                        if(nameToCol(currentTable, nameList[i]).type == INTEGER) {
+                            valueList[i] = malloc(sizeof(int));
+                            scanfWell("%d", valueList[i]);
+                        }
+                        else if(nameToCol(currentTable, nameList[i]).type == CHAR) {
+                            valueList[i] = malloc(sizeof(char) * MAX_LEN);
+                            scanfWell("%s", valueList[i]);
+                        }
+                        else if(nameToCol(currentTable, nameList[i]).type == DECIMAL) {
+                            valueList[i] = malloc(sizeof(double));
+                            scanfWell("%lf", valueList[i]);
+                        }
+                    }
+                }
+                else {
+                    for(int i = 0; i < numThings; i++) {
+                        nameList[i] = strdup(currentTable->cols[i].name);
+
+                        printf("New value for %s (of type ", nameList[i]);
+                        printType(nameToCol(currentTable, nameList[i]).type);
+                        printf("): ");
+
+                        if(nameToCol(currentTable, nameList[i]).type == INTEGER) {
+                            valueList[i] = malloc(sizeof(int));
+                            scanfWell("%d", valueList[i]);
+                        }
+                        else if(nameToCol(currentTable, nameList[i]).type == CHAR) {
+                            valueList[i] = malloc(sizeof(char) * MAX_LEN);
+                            scanfWell("%s", valueList[i]);
+                        }
+                        else if(nameToCol(currentTable, nameList[i]).type == DECIMAL) {
+                            valueList[i] = malloc(sizeof(double));
+                            scanfWell("%lf", valueList[i]);
+                        }
+                    }
+                }
+
+                printf("Which row would you like to insert into? (1-%d): ", currentTable->numRows);
+                do {
+                    scanfWell("%d", &rowNum);
+                    if(rowNum < 1 || rowNum > currentTable->numRows)
+                        printf("Please input a valid row number. (1-%d): ", currentTable->numRows);
+                } while(rowNum < 1 || rowNum > currentTable->numRows);
+
+
+                insert(currentTable, numThings, nameList, valueList);
+
+                for(int i = 0; i < numThings; i++) {
+                    free(nameList[i]);
+                    free(valueList[i]);
+                }
+                free(nameList);
+                free(valueList);
+                nameList = NULL;
+                valueList = NULL;
 
                 break;
             case 6:
@@ -921,6 +1246,13 @@ Table* userTableOperator(int numTables, Table* tables) {
             case 13:
                 //"13. Export Table(s) to .db File"
                 break;
+
+                /*
+                perhaps incorporate a where or select saving system, allowing the user to sqitftly use frequently used where or select statements.
+                I would save these in a separate .cql file separate from the .sql file that can be converted to .db.
+                I could add other useful CQL specific saves later on.
+                */
+
             case 0:
                 //"0. Save & Exit"
                 printf("Saving\n");
@@ -951,24 +1283,24 @@ int printActionMenu(Table* table) {
         printTable(*table);
     }
     printf("\nWhat would you like to do?\n");
-    printf("1. Create a table\n"
-        "2. Print a table\n"
-        "3. Choose new current table\n"
-        "4. Select from current table\n"
-        "5. Insert a new row into current table\n"
-        "6. Insert a new column into current table\n"
-        "7. Update an existing value in current table\n"
-        "8. Delete records from current table\n"
-        "9. Delete current table\n"
-        "10. Import Table(s) from .sql File\n"
-        "11. Import Table(s) from .db File\n"
-        "12. Export Table(s) to .SQL File\n"
-        "13. Export Table(s) to .db File\n"
-        "0. Save & Exit\n"
-        "-1. Exit Without Saving\n"
+    printf("1. CREATE a table\n"
+        "2. PRINT a table\n"
+        "3. CHOOSE new current table\n"
+        "4. SELECT from current table\n"
+        "5. INSERT a new row into current table\n"
+        "6. INSERT a new column into current table\n"
+        "7. UPDATE an existing value in current table\n"
+        "8. DELETE records from current table\n"
+        "9. DELETE current table\n"
+        "10. IMPORT Table(s) from .sql File\n"
+        "11. IMPORT Table(s) from .db File\n"
+        "12. EXPORT Table(s) to .SQL File\n"
+        "13. EXPORT Table(s) to .db File\n"
+        "0. SAVE & EXIT\n"
+        "-1. EXIT WITHOUT SAVING\n"
         "Your choice : ");
     do {
-        scanf("%d", &menuChoice);
+        scanfWell("%d", &menuChoice);
         if(menuChoice < -1 || menuChoice > 13)
             printf("Please choose between -1 and 13: ");
     } while(menuChoice < -1 || menuChoice > 13);
@@ -985,29 +1317,28 @@ int printTableMenu(int numTables, Table* tableList) {
         printf("Table %d. %s\n", i + 1, tableList[i].name);
     printf("Your choice: ");
     do {
-        scanf("%d", &tableChoice);
+        scanfWell("%d", &tableChoice);
         tableChoice--;
         if(tableChoice < 0 || tableChoice >= numTables)
-            printf("Please input a valid table (1-%d): ", numTables);
+            printf("Please input a valid table. (1-%d): ", numTables);
     } while(tableChoice < 0 || tableChoice >= numTables);
 
     return tableChoice;
 }
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
 
-    printf("%p\n", whereList);
-    char yesno[5];
+    char yesno[MAX_LEN];
     int numWheres = 0;
-    int numSpaces = 0;
-    char* token;
-    char* token2;
-    static int intVal;
-    static double doubVal;
-    char* stringVal;
+    // int numSpaces = 0;
+    // char* token;
+    // char* token2;
+    // static int intVal;
+    // static double doubVal;
+    // char* stringVal;
 
     do {
         numWheres++;
-        numSpaces = 0;
+        // numSpaces = 0;
         if(numWheres == 1) {
             *whereList = malloc(sizeof(Where));
             *connectiveList = malloc(sizeof(char));
@@ -1017,71 +1348,77 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
             *whereList = realloc(*whereList, sizeof(Where) * numWheres);
         }
 
-        printf("Please input the column name for your where statement: ");
-        (*whereList)[numWheres - 1].searchColName = malloc(sizeof(char) * 50);
-        fgetsUntil((*whereList)[numWheres - 1].searchColName, 50);
-        for(int i = 0; i < strlen((*whereList)[numWheres - 1].searchColName);i++) {
-            if((*whereList)[numWheres - 1].searchColName[i] == ' ') {
-                numSpaces++;
-            }
-        }
-        if(numSpaces >= 2) {
-            (*whereList)[numWheres - 1].comparison = malloc(sizeof(char) * 5);
-            printf("1\n");
-            token = strtok((*whereList)[numWheres - 1].searchColName, " ");
-            printf("2\n");
-            (*whereList)[numWheres - 1].comparison = strtok((*whereList)[numWheres - 1].searchColName, " ");
-            printf("3\n");
-            token2 = strtok((*whereList)[numWheres - 1].searchColName, " ");
-            printf("4\n");
-            // strcpy(whereList[numWheres - 1].searchColName, token);
-            (*whereList)[numWheres - 1].searchColName = token;
-            printf("%s\n", (*whereList)[numWheres - 1].searchColName);
-            printf("5\n");
-            if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == INTEGER) {
-                printf("INT\n");
-                intVal = atoi(token2);
-                (*whereList)[numWheres - 1].searchValue = &intVal;
-            }
-            else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == CHAR) {
-                printf("CHAR\n");
-                (*whereList)[numWheres - 1].searchValue = token2;
-            }
-            else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == DECIMAL) {
-                printf("DECIMAL\n");
-                doubVal = strtod(token2, NULL);
-                (*whereList)[numWheres - 1].searchValue = &doubVal;
-            }
-            printf("6\n");
-        }
-        else {
+        (*whereList)[numWheres - 1].searchColName = malloc(sizeof(char) * MAX_LEN);
+        do {
+            printf("Please input the column name for your where statement: ");
+            fgetsUntil((*whereList)[numWheres - 1].searchColName, MAX_LEN);
+            if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == -1)
+                continue;
+            else
+                break;
+        } while(1);
+        // for(int i = 0; i < strlen((*whereList)[numWheres - 1].searchColName);i++)
+        //     if((*whereList)[numWheres - 1].searchColName[i] == ' ')
+        //         numSpaces++;
+        // if(numSpaces >= 2) {
+        //     (*whereList)[numWheres - 1].comparison = malloc(sizeof(char) * 5);
+        //     printf("1\n");
+        //     token = strtok((*whereList)[numWheres - 1].searchColName, " ");
+        //     printf("2\n");
+        //     (*whereList)[numWheres - 1].comparison = strtok((*whereList)[numWheres - 1].searchColName, " ");
+        //     printf("3\n");
+        //     token2 = strtok((*whereList)[numWheres - 1].searchColName, " ");
+        //     printf("4\n");
+        //     // strcpy(whereList[numWheres - 1].searchColName, token);
+        //     (*whereList)[numWheres - 1].searchColName = token;
+        //     printf("%s\n", (*whereList)[numWheres - 1].searchColName);
+        //     printf("5\n");
+        //     if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == INTEGER) {
+        //         printf("INT\n");
+        //         intVal = atoi(token2);
+        //         (*whereList)[numWheres - 1].searchValue = &intVal;
+        //     }
+        //     else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == CHAR) {
+        //         printf("CHAR\n");
+        //         (*whereList)[numWheres - 1].searchValue = token2;
+        //     }
+        //     else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == DECIMAL) {
+        //         printf("DECIMAL\n");
+        //         doubVal = strtod(token2, NULL);
+        //         (*whereList)[numWheres - 1].searchValue = &doubVal;
+        //     }
+        //     printf("6\n");
+        // }
+        // else {
 
-            printf("Please enter the comparison you will use (=, <, >, etc.): ");
-            (*whereList)[numWheres - 1].comparison = malloc(sizeof(char) * 5);
-            do {
-                fgetsUntil((*whereList)[numWheres - 1].comparison, 5);
-                if(!isValidComp((*whereList)[numWheres - 1].comparison))
-                    printf("Invalid comparison. Try again: ");
-            } while(!isValidComp((*whereList)[numWheres - 1].comparison));
+        printf("Please enter the comparison you will use (=, !=, <, >, <=, >=): ");
+        (*whereList)[numWheres - 1].comparison = malloc(sizeof(char) * MAX_LEN);
+        do {
+            fgetsUntil((*whereList)[numWheres - 1].comparison, MAX_LEN);
+            if(!isValidComp((*whereList)[numWheres - 1].comparison))
+                printf("Invalid comparison. Try again: ");
+        } while(!isValidComp((*whereList)[numWheres - 1].comparison));
 
-            if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == INTEGER) {
-                printf("Please input the integer value you are looking for: ");
-                scanf("%d", (*whereList)[numWheres - 1].searchValue);
-            }
-            else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == CHAR) {
-                printf("Please input the string value you are looking for: ");
-                (*whereList)[numWheres - 1].searchValue = malloc(sizeof(char) * 50);
-                scanf("%s", (*whereList)[numWheres - 1].searchValue);
-            }
-            else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == DECIMAL) {
-                printf("Please input the decimal value you are looking for: ");
-                scanf("%lf", (*whereList)[numWheres - 1].searchValue);
-            }
+        if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == INTEGER) {
+            printf("Please input the integer value you are looking for: ");
+            (*whereList)[numWheres - 1].searchValue = malloc(sizeof(int));
+            scanfWell("%d", (*whereList)[numWheres - 1].searchValue);
         }
+        else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == CHAR) {
+            printf("Please input the string value you are looking for: ");
+            (*whereList)[numWheres - 1].searchValue = malloc(sizeof(char) * MAX_LEN);
+            scanfWell("%s", (*whereList)[numWheres - 1].searchValue);
+        }
+        else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName).type == DECIMAL) {
+            printf("Please input the decimal value you are looking for: ");
+            (*whereList)[numWheres - 1].searchValue = malloc(sizeof(double));
+            scanfWell("%lf", (*whereList)[numWheres - 1].searchValue);
+        }
+        // }
 
         printf("Would you like to add another where statement? (yes/no): ");
         do {
-            fgetsUntil(yesno, 5);
+            fgetsUntil(yesno, MAX_LEN);
             if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
                 printf("Please input 'yes' or 'no': ");
         } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
@@ -1091,8 +1428,8 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
             printf("Please input the connective to connect the where statement\nyou just made with the new one you're going to make. ('&' or '|'): ");
             do {
                 do {
-                    scanf("%c", &((*connectiveList)[numWheres]));
-                    printf("%c\n", (*connectiveList)[numWheres]);
+                    scanfWell("%c", &((*connectiveList)[numWheres]));
+                    // printf("%c\n", (*connectiveList)[numWheres]);
                 } while((*connectiveList)[numWheres - 1] == '\n');
                 if((*connectiveList)[numWheres] != '&' && (*connectiveList)[numWheres] != '|')
                     printf("Invalid connective, try again: ");
@@ -1114,7 +1451,7 @@ int printTypeChart(int colNum) {
         "  4. DATE\n");
     printf("Type for column #%d: ", colNum);
     do {
-        scanf("%d", &choice);
+        scanfWell("%d", &choice);
         choice--;
         if(choice < 0 || choice > 3)
             printf("Please input a valid type (1-4): ");
@@ -1124,11 +1461,34 @@ int printTypeChart(int colNum) {
 
 }
 
+void printType(int type) {
+    if(type == CHAR)
+        printf("CHAR");
+    else if(type == INTEGER)
+        printf("INTEGER");
+    else if(type == DECIMAL)
+        printf("DECIMAL");
+    else
+        printf("UNKOWN TYPE");
+}
+
 void fgetsUntil(char* string, int size) {
     do {
         fgets(string, size, stdin);
     } while(strcmp(string, "\n") == 0);
     string[strlen(string) - 1] = '\0';
+}
+
+void scanfWell(char* formSpec, void* val) {
+    char buffer[MAX_LEN];
+    int success;
+
+    do {
+        fgetsUntil(buffer, MAX_LEN);
+        success = sscanf(buffer, formSpec, val);
+        if(!success)
+            printf("Please try that again: ");
+    } while(!success);
 }
 
 void sleep(int milliseconds) {

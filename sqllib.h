@@ -6,6 +6,7 @@
 #include <sqlite3.h>
 #include <time.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
+#define MAX_LEN 50
 
 typedef struct {
     int year;
@@ -16,20 +17,26 @@ typedef struct {
     int seconds;
 } Date;
 
-typedef union {
-    char* CHAR;
-    int INTEGER;
-    double DECIMAL;
-    Date DATE;
-} ElementUnion;
-
 typedef enum {
-    // cNULL = -1,
+    vNULL = -1,
     CHAR = 0,
     INTEGER = 1,
     DECIMAL = 2,
     DATE = 3,
 } TypeEnum;
+
+typedef union {
+    char* CHAR;
+    int INTEGER;
+    double DECIMAL;
+    Date DATE;
+    TypeEnum type;
+} ElementUnion;
+
+// typedef struct {
+//     ElementUnion val;
+//     TypeEnum type;
+// } Value;
 
 typedef struct {
     ElementUnion* values;
@@ -46,6 +53,7 @@ typedef struct {
     char* name;
     int numCols;
     int numRows;
+    int selected;
 } Table;
 
 //Possinly add BETWEEN functionality to this struct? As an allowed comparion?
@@ -76,7 +84,8 @@ Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
 void insert(Table* table, int numValues, char** colNames, void** values); //Implemented
-//... --> char *col1Name, void *value1, ...
+void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum);
+
 void update(Table* table, char* colName, void* newValue, int numWheres, Where* wheres, char* conns);
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
 
@@ -108,13 +117,15 @@ void deleteAll(Table* table); //Implemented
 void freeTable(Table* table); //I fear valgrind
 
 void printTable(Table table); //Implemented
-void printTableRow(int numCols); //Implemented
+void printTableRow(int numCols, int rowNum); //Implemented
 int printActionMenu(Table* table);
 int printTableMenu(int numTables, Table* tableList);
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList);
 int printTypeChart(int colNum);
+void printType(int type);
 
 int getRowIndex(Table table, char* colName, void* value);
+Table copyTable(Table table);
 Column copyColumn(int numVals, Column col);
 
 char* dateToString(Date date);
@@ -123,8 +134,10 @@ Date stringToDate(char* dateString);
 int isAggregate(char* name);
 char* getAggregateName(char* name);
 
-void fgetsUntil(char* string, int size);
-void sleep(int milliseconds);
+void fgetsUntil(char* string, int size); //Implemented
+void scanfWell(char* formSpec, void* val); //Implemented
+void sleep(int milliseconds); //Implemented
+void* memdup(void* src, int numBytes);
 
 /**
  * Communication with SQL Language
