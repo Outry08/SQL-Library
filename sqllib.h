@@ -79,22 +79,25 @@ typedef struct {
 //Primary keys use hashtables in SQL, so we could do that here too.
 Table create(char* tableName, int numCols, char** colNames, int* colTypes); //Implemented
 
-Table select(Table table, Select select, int numWheres, Where* wheres, char* conns);
+Table select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
 void insert(Table* table, int numValues, char** colNames, void** values); //Implemented
-void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum);
 
-void update(Table* table, char* colName, void* newValue, int numWheres, Where* wheres, char* conns);
+void update(Table* table, int numUpdCols, char** colNames, void* newValue, int numWheres, Where* wheres, char* conns); //Implemented
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
 
 /**
  * More C-Like Functions for Table Operations
 **/
+void chackDupNames(Table* tableList);
+void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum); //Implemented
 void addColumn(Table* table, char* colName, int colType);
 void deleteColumn(Table* table, char* colName);
 int getValIndex(Column col, void* value);
+void swapRows(Table* table, int index1, int index2);
+void swapCols(Table* table, char* colName1, int colName2);
 
 /**
  * C Types to SQL Table Types and Vice Versa
@@ -118,21 +121,21 @@ void freeTable(Table* table); //I fear valgrind
 
 void printTable(Table table); //Implemented
 void printTableRow(int numCols, int rowNum); //Implemented
-int printActionMenu(Table* table);
-int printTableMenu(int numTables, Table* tableList);
-int whereInput(Table* currentTable, Where** whereList, char** connectiveList);
-int printTypeChart(int colNum);
-void printType(int type);
+int actionMenu(Table* table); //Implemented
+int tableMenu(int numTables, Table* tableList); //Implemented
+int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
+int typeInput(int colNum); //Implemented
+void printType(int type); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
-Table copyTable(Table table);
-Column copyColumn(int numVals, Column col);
+Table copyTable(Table table); //Implemented
+Column copyColumn(int numVals, Column col); //Implemented
 
 char* dateToString(Date date);
 Date stringToDate(char* dateString);
 
-int isAggregate(char* name);
-char* getAggregateName(char* name);
+int isAggregate(char* name); //Implemented
+char* getAggregateName(char* name); //Implemented
 
 void fgetsUntil(char* string, int size); //Implemented
 void scanfWell(char* formSpec, void* val); //Implemented
