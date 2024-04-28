@@ -1,10 +1,11 @@
-//CQL Name
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <sqlite3.h>
 #include <time.h>
+#include <math.h>
+#include <ctype.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define MAX_LEN 50
 
@@ -42,9 +43,9 @@ typedef struct {
     ElementUnion* values;
     char* name;
     TypeEnum type;
-    // int notNull; //0 or 1
-    // int primaryKey; //0 or 1
-    // int foreign key; //0 or 1
+    // int notNull; //0 or 1 //take user input along with column name, ask for '-nn' right after the name.
+    // int primaryKey; //0 or 1 //take user input along with column name, ask for '-p' right after the name.
+    // int foreign key; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
     // int chained key; //0 or 1; the pointer is shared among multiple tables so that simultaneous updates aren't needed.
 } Column;
 
@@ -121,10 +122,12 @@ void freeTable(Table* table); //I fear valgrind
 
 void printTable(Table table); //Implemented
 void printTableRow(int numCols, int rowNum); //Implemented
+char* intToLetter(int number); //Implemented
+int letterToInt(char* stringOfLetters); //Implemented
 int actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
-int typeInput(int colNum); //Implemented
+int typeInput(void); //Implemented
 void printType(int type); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
