@@ -84,7 +84,7 @@ Table select(Table table, Select select, int numWheres, Where* wheres, char* con
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
-void insert(Table* table, int numValues, char** colNames, void** values); //Implemented
+void insertRow(Table* table, int numValues, char** colNames, void** values); //Implemented
 
 void update(Table* table, int numUpdCols, char** colNames, void* newValue, int numWheres, Where* wheres, char* conns); //Implemented
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
@@ -94,7 +94,8 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemen
 **/
 void chackDupNames(Table* tableList);
 void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum); //Implemented
-void addColumn(Table* table, char* colName, int colType);
+void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values); //Implemented
+void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName);
 int getValIndex(Column col, void* value);
 void swapRows(Table* table, int index1, int index2);
@@ -106,9 +107,9 @@ void swapCols(Table* table, char* colName1, int colName2);
 Column arrayToCol(char* colName, void** arr);
 Table matrixToTable(void** matrix, char* tableName, char** colNames, int type);
 void matrixToSQL(void** matrix, int type, char* filename);
-void** rowToArray();
-void** colToArray();
-void** tableToMatrix();
+void** rowToArray(void);
+void** colToArray(void);
+void** tableToMatrix(void);
 
 /**
  * Helper Functions
@@ -118,13 +119,13 @@ Column nameToCol(Table* table, char* colName); //Implemented
 int compare(Column column, int valIndex, char* comparison, void* value); //Implemented
 char* oppComp(char* comparison); //Implemented
 void deleteAll(Table* table); //Implemented
-void freeTable(Table* table); //I fear valgrind
+void freeTable(Table* table);
 
 void printTable(Table table); //Implemented
 void printTableRow(int numCols, int rowNum); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
-int actionMenu(Table* table); //Implemented
+int* actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
 int typeInput(void); //Implemented
