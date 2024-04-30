@@ -86,7 +86,7 @@ Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Whe
 
 void insertRow(Table* table, int numValues, char** colNames, void** values); //Implemented
 
-void update(Table* table, int numUpdCols, char** colNames, void* newValue, int numWheres, Where* wheres, char* conns); //Implemented
+void update(Table* table, int numUpdCols, char** colNames, void** newValues, int numWheres, Where* wheres, char* conns); //Implemented
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
 
 /**
@@ -114,13 +114,14 @@ void** tableToMatrix(void);
 /**
  * Helper Functions
 **/
-Column nameToCol(Table* table, char* colName); //Implemented
+Column nameToCol(Table* table, char* colName, int* colIndex); //Implemented
 
 int compare(Column column, int valIndex, char* comparison, void* value); //Implemented
 char* oppComp(char* comparison); //Implemented
 void deleteAll(Table* table); //Implemented
 void freeTable(Table* table);
 
+Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented
 void printTableRow(int numCols, int rowNum); //Implemented
 char* intToLetter(int number); //Implemented
@@ -140,6 +141,9 @@ Date stringToDate(char* dateString);
 
 int isAggregate(char* name); //Implemented
 char* getAggregateName(char* name); //Implemented
+
+void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex); //Implemented
+void checkColumnNames(Table table, char* nameToCheck, int newNameIndex); //Implemented
 
 void fgetsUntil(char* string, int size); //Implemented
 void scanfWell(char* formSpec, void* val); //Implemented
