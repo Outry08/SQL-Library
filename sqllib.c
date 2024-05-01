@@ -1841,9 +1841,173 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 break;
             case 8:
-                //"8. SWAP"
-                // "1. SWAP two rows in current table\n"
-                // "2. SWAP two columns in current table\n"
+                //"8. MOVE"
+                if(numTables <= 0) {
+                    printf("There are no tables to choose from.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    if(menuChoices[1] == 1)
+                        printf("Which table would you like to move rows in?\n");
+                    else
+                        printf("Which table would you like to move columns in?\n");
+                    currTableIndex = tableMenu(numTables, tables);
+                    currentTable = &tables[currTableIndex];
+                    printf("Here is your current table:\n");
+                    printTable(*currentTable);
+                }
+
+                switch(menuChoices[1]) {
+                    case 1:
+                        // "1. MOVE a row to new position in current table"
+
+                        printf("Please input the number of the row you would like to move (1-%d): ", currentTable->numRows);
+                        do {
+                            scanfWell("%d", &rowNum);
+                            if(--rowNum < 0 || rowNum > currentTable->numRows - 1)
+                                printf("Please input a number between 1 and %d: ", currentTable->numRows);
+                        } while(rowNum < 0 || rowNum > currentTable->numRows - 1);
+
+                        if(currentTable->numRows > 1) {
+
+                            int newPos;
+
+                            printf("Which position would you like to insert this row into? (1-%d): ", currentTable->numRows);
+                            do {
+                                scanfWell("%d", &newPos);
+                                if(--newPos < 0 || newPos > currentTable->numRows - 1)
+                                    printf("Please input a number between 1 and %d: ", currentTable->numRows);
+                            } while(newPos < 0 || newPos > currentTable->numRows - 1);
+
+                            int typeDummy;
+                            int intDummy;
+                            double doubleDummy;
+                            char charDummy[MAX_LEN];
+
+                            for(int i = 0; i < currentTable->numCols; i++) {
+                                typeDummy = currentTable->cols[i].values[rowNum].type;
+
+                                if(currentTable->cols[i].type == INTEGER) {
+                                    intDummy = currentTable->cols[i].values[rowNum].INTEGER;
+
+                                    if(newPos > rowNum) {
+                                        for(int j = rowNum; j < newPos; j++) {
+                                            currentTable->cols[i].values[j].INTEGER = currentTable->cols[i].values[j + 1].INTEGER;
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j + 1].type;
+                                        }
+                                    }
+                                    else {
+                                        for(int j = rowNum; j > newPos; j--) {
+                                            currentTable->cols[i].values[j].INTEGER = currentTable->cols[i].values[j - 1].INTEGER;
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j - 1].type;
+                                        }
+                                    }
+
+                                    currentTable->cols[i].values[newPos].INTEGER = intDummy;
+                                }
+                                else if(currentTable->cols[i].type == DECIMAL) {
+                                    doubleDummy = currentTable->cols[i].values[rowNum].DECIMAL;
+
+                                    if(newPos > rowNum) {
+                                        for(int j = rowNum; j < newPos; j++) {
+                                            currentTable->cols[i].values[j].DECIMAL = currentTable->cols[i].values[j + 1].DECIMAL;
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j + 1].type;
+                                        }
+                                    }
+                                    else {
+                                        for(int j = rowNum; j > newPos; j--) {
+                                            currentTable->cols[i].values[j].DECIMAL = currentTable->cols[i].values[j - 1].DECIMAL;
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j - 1].type;
+                                        }
+                                    }
+
+                                    currentTable->cols[i].values[newPos].DECIMAL = doubleDummy;
+                                }
+                                else if(currentTable->cols[i].type == CHAR) {
+                                    strcpy(charDummy, currentTable->cols[i].values[rowNum].CHAR);
+
+                                    if(newPos > rowNum) {
+                                        for(int j = rowNum; j < newPos; j++) {
+                                            printf("%s into %s\n", currentTable->cols[i].values[j + 1].CHAR, currentTable->cols[i].values[j].CHAR);
+                                            // strcpy(currentTable->cols[i].values[j].CHAR, currentTable->cols[i].values[j + 1].CHAR);
+                                            // if(currentTable->cols[i].values[j].type != vNULL)
+                                            //     free(currentTable->cols[i].values[j].CHAR);
+                                            currentTable->cols[i].values[j].CHAR = strdup(currentTable->cols[i].values[j + 1].CHAR);
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j + 1].type;
+                                        }
+                                    }
+                                    else {
+                                        for(int j = rowNum; j > newPos; j--) {
+                                            printf("%s into %s\n", currentTable->cols[i].values[j - 1].CHAR, currentTable->cols[i].values[j].CHAR);
+                                            // strcpy(currentTable->cols[i].values[j].CHAR, currentTable->cols[i].values[j - 1].CHAR);
+                                            // if(currentTable->cols[i].values[j].type != vNULL)
+                                            //     free(currentTable->cols[i].values[j].CHAR);
+                                            currentTable->cols[i].values[j].CHAR = strdup(currentTable->cols[i].values[j - 1].CHAR);
+                                            currentTable->cols[i].values[j].type = currentTable->cols[i].values[j - 1].type;
+                                        }
+                                    }
+                                    printf("%s into %s\n", charDummy, currentTable->cols[i].values[newPos].CHAR);
+                                    // strcpy(currentTable->cols[i].values[newPos].CHAR, charDummy);
+                                    // if(currentTable->cols[i].values[newPos].type != vNULL)
+                                    //     free(currentTable->cols[i].values[newPos].CHAR);
+                                    currentTable->cols[i].values[newPos].CHAR = strdup(charDummy);
+
+                                }
+
+                                currentTable->cols[i].values[newPos].type = typeDummy;
+
+                            }
+                        }
+                        else {
+                            printf("There's not more than one row in this table. No movement necessary.\n");
+                        }
+
+                        break;
+                    case 2:
+                        // "2. MOVE a column to new position in current table"
+                        if(currentTable->numCols > 1) {
+                            char* colString = malloc(sizeof(char) * MAX_LEN);
+                            int colPos;
+                            printf("Please input the position of the column you would like to move (A-%s): ", intToLetter(currentTable->numCols - 1));
+                            do {
+                                fgetsUntil(colString, MAX_LEN);
+                                colPos = letterToInt(colString) - 1;
+                                if(colPos < 0 || colPos >= currentTable->numCols)
+                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols - 1));
+                            } while(colPos < 0 || colPos >= currentTable->numCols);
+
+                            int newPos;
+
+                            printf("Which position would you like to insert this column into? (A-%s): ", intToLetter(currentTable->numCols - 1));
+                            do {
+                                fgetsUntil(colString, MAX_LEN);
+                                newPos = letterToInt(colString) - 1;
+                                if(newPos < 0 || newPos >= currentTable->numCols)
+                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols - 1));
+                            } while(newPos < 0 || newPos >= currentTable->numCols);
+
+                            Column dummyCol = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
+
+                            if(newPos > colPos) {
+                                for(int i = colPos; i < newPos; i++) {
+                                    currentTable->cols[i] = currentTable->cols[i + 1];
+                                }
+                            }
+                            else {
+                                for(int i = colPos; i > newPos; i--) {
+                                    currentTable->cols[i] = currentTable->cols[i - 1];
+                                }
+                            }
+                            currentTable->cols[newPos] = dummyCol;
+
+                        }
+                        else {
+                            printf("There's not more than one column in this table. No movement necessary.\n");
+                        }
+
+                        break;
+
+                }
                 break;
             case 9:
                 //"9. COPY"
@@ -1926,7 +2090,7 @@ int* actionMenu(Table* table) {
             "5. SELECT\n"
             "6. INSERT\n"
             "7. UPDATE\n"
-            "8. SWAP\n"
+            "8. MOVE\n"
             "9. COPY\n"
             "10. PASTE\n"
             "11. DELETE\n"
@@ -1980,8 +2144,8 @@ int* actionMenu(Table* table) {
                 break;
 
             case 8:
-                printf("1. SWAP two rows in current table\n"
-                    "2. SWAP two columns in current table\n");
+                printf("1. MOVE a row to new position in current table\n"
+                    "2. MOVE a column to new position in current table\n");
                 numOptions = 2;
                 break;
 
@@ -1993,8 +2157,8 @@ int* actionMenu(Table* table) {
                 break;
 
             case 10:
-                printf("1. PASTE row in current table\n"
-                    "2. PASTE column in current table\n");
+                printf("1. PASTE row into current table\n"
+                    "2. PASTE column into current table\n");
                 numOptions = 2;
                 break;
 
