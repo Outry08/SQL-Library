@@ -126,7 +126,10 @@ void freeTable(Table* table);
 
 Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented
-void printTableRow(int numCols, int rowNum); //Implemented
+void printSeparatorLine(int numCols, int rowNum); //Implemented
+void printRow(Table table, int rowIndex); //Implemented
+void printLoneRow(LoneValue* row, int numValues); //Implemented
+void printColumn(Column col, int numValues); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
 int* actionMenu(Table* table); //Implemented

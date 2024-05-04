@@ -1101,14 +1101,14 @@ void printTable(Table table) {
         printf("\e[1m%-*s\e[m", (int)(colWidth / 2 - strlen(intToLetter(i)) + 1), " ");
     }
 
-    printTableRow(table.numCols, 0);
+    printSeparatorLine(table.numCols, 0);
 
     for(int i = 0; i < table.numCols; i++)
         printf("| \e[1m%-*s\e[m", colWidth - 2, table.cols[i].name);
     printf("|");
 
     for(int i = 0; i < table.numRows; i++) {
-        printTableRow(table.numCols, i + 1);
+        printSeparatorLine(table.numCols, i + 1);
         for(int j = 0; j < table.numCols; j++) {
             if(table.cols[j].values[i].isNULL == 1)
                 printf("| %-*s ", colWidth - 3, "NULL");
@@ -1136,11 +1136,11 @@ void printTable(Table table) {
         printf("|");
     }
 
-    printTableRow(table.numCols, 0);
+    printSeparatorLine(table.numCols, 0);
     printf("\n");
 }
 
-void printTableRow(int numCols, int rowNum) {
+void printSeparatorLine(int numCols, int rowNum) {
     printf("\n\t+");
     for(int j = 0; j < numCols; j++) {
         for(int k = 0; k < 22; k++) {
@@ -1152,6 +1152,75 @@ void printTableRow(int numCols, int rowNum) {
         printf("\n%d\t", rowNum);
     else
         printf("\n\t");
+}
+
+void printRow(Table table, int rowIndex) {
+
+    printf("\t");
+    for(int i = 0; i < table.numCols; i++) {
+        printf(" | ");
+        if(table.cols[i].values[rowIndex].isNULL) {
+            printf("NULL");
+        }
+        else {
+            if(table.cols[i].type == INTEGER) {
+                printf("%d", table.cols[i].values[rowIndex].val.INTEGER);
+            }
+            else if(table.cols[i].type == CHAR) {
+                printf("%s", table.cols[i].values[rowIndex].val.CHAR);
+            }
+            else if(table.cols[i].type == DECIMAL) {
+                printf("%lf", table.cols[i].values[rowIndex].val.DECIMAL);
+            }
+        }
+    }
+
+    printf(" | \n");
+}
+
+void printLoneRow(LoneValue* row, int numValues) {
+    printf("\t");
+    for(int i = 0; i < numValues; i++) {
+        printf(" | ");
+        if(row[i].value.isNULL) {
+            printf("NULL");
+        }
+        else {
+            if(row[i].type == INTEGER) {
+                printf("%d", row[i].value.val.INTEGER);
+            }
+            else if(row[i].type == CHAR) {
+                printf("%s", row[i].value.val.CHAR);
+            }
+            else if(row[i].type == DECIMAL) {
+                printf("%lf", row[i].value.val.DECIMAL);
+            }
+        }
+    }
+
+    printf(" | \n");
+}
+
+void printColumn(Column col, int numValues) {
+    for(int i = 0; i < numValues; i++) {
+        printf("\t| ");
+        if(col.values[i].isNULL) {
+            printf("NULL");
+        }
+        else {
+            if(col.type == INTEGER) {
+                printf("%d", col.values[i].val.INTEGER);
+            }
+            else if(col.type == CHAR) {
+                printf("%s", col.values[i].val.CHAR);
+            }
+            else if(col.type == DECIMAL) {
+                printf("%lf", col.values[i].val.DECIMAL);
+            }
+        }
+        printf(" |\n");
+    }
+    printf("\n");
 }
 
 /**
@@ -2122,7 +2191,9 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         rowCopy = copyRow(currentTable, rowNum);
                         rowCopyLength = currentTable->numCols;
-                        printf("Row #%d copied.\n", rowNum + 1);
+                        printf("Row #%d copied:\n", rowNum + 1);
+
+                        printLoneRow(rowCopy, rowCopyLength);
 
                         break;
                     case 2: {
@@ -2140,7 +2211,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                         colCopy = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
                         colCopyLength = currentTable->numRows;
 
-                        printf("Column %s copied.\n", colString);
+                        printf("Column %s copied:\n", colString);
+
+                        printColumn(colCopy, colCopyLength);
 
                         free(colString);
 
@@ -2165,8 +2238,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
             case 10:
                 //"10. PASTE"
-                // "1. PASTE row in current table"
-                // "2. PASTE column in current table"
+
+                switch(menuChoices[1]) {
+                    case 1:
+                        // "1. PASTE row in current table"
+                        break;
+                    case 2:
+                        // "2. PASTE column in current table"
+                        break;
+                }
+
+
                 break;
             case 11:
                 //"11. DELETE"
