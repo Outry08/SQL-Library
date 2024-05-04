@@ -549,10 +549,13 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     Table newTable;
     // printf("HELLO THERE\n");
 
-    newTable.name = strdup(baseTable.name);
+    newTable.name = malloc(sizeof(char) * MAX_LEN);
+
+    strcpy(newTable.name, "Selected from ");
+
+    strcat(newTable.name, baseTable.name);
     // printf("1\n");
-    newTable.name = realloc(newTable.name, strlen(newTable.name) + 10);
-    strcat(newTable.name, " selected"); //Add selected numbers
+    newTable.name = realloc(newTable.name, sizeof(char) * (strlen(newTable.name) + 1));
     newTable.cols = malloc(sizeof(Column) * numCols);
 
     newTable.numCols = numCols;
@@ -603,18 +606,22 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
 Table copyTable(Table table) {
     Table newTable;
 
-    newTable.name = strdup(table.name);
-    newTable.name = realloc(newTable.name, strlen(newTable.name) + 6);
-    strcat(newTable.name, " copy"); //Add copy numbers
+    newTable.name = malloc(sizeof(char) * MAX_LEN);
+
+    strcpy(newTable.name, "Copy of ");
+    // strdup(table.name);
+    // newTable.name = realloc(newTable.name, strlen(newTable.name) + 6);
+    strcat(newTable.name, table.name);
+
+    newTable.name = realloc(newTable.name, sizeof(char) * (strlen(newTable.name) + 1));
 
     newTable.numCols = table.numCols;
     newTable.numRows = table.numRows;
 
     newTable.cols = malloc(sizeof(Column) * newTable.numCols);
 
-    for(int i = 0; i < newTable.numCols; i++) {
+    for(int i = 0; i < newTable.numCols; i++)
         newTable.cols[i] = copyColumn(table.numRows, table.cols[i]);
-    }
 
     return newTable;
 }
@@ -627,20 +634,23 @@ Column copyColumn(int numVals, Column col) {
     colCopy.name = strdup(col.name);
     colCopy.type = col.type;
     colCopy.values = malloc(sizeof(Value) * numVals);
-    // for(int i = 0; i < numVals; i++) {
-    //     colCopy.values[i].type = col.values[i].type;
-    //     if(colCopy.values[i].type == INTEGER) {
-    //         colCopy.values[i].INTEGER = col.values[i].INTEGER;
-    //     }
-    //     else if(colCopy.values[i].type == CHAR) {
-    //         printf("%s\n", col.values[i].CHAR);
-    //         colCopy.values[i].CHAR = strdup(col.values[i].CHAR);
-    //     }
-    //     else if(colCopy.values[i].type == DECIMAL) {
-    //         colCopy.values[i].DECIMAL = col.values[i].DECIMAL;
-    //     }
+    for(int i = 0; i < numVals; i++) {
+        colCopy.values[i].isNULL = col.values[i].isNULL;
+        if(!colCopy.values[i].isNULL) {
+            if(colCopy.type == INTEGER) {
+                colCopy.values[i].val.INTEGER = col.values[i].val.INTEGER;
+            }
+            else if(colCopy.type == CHAR) {
+                colCopy.values[i].val.CHAR = strdup(col.values[i].val.CHAR);
+            }
+            else if(colCopy.type == DECIMAL) {
+                colCopy.values[i].val.DECIMAL = col.values[i].val.DECIMAL;
+            }
+        }
+    }
+    // for(int i = 0; i < numVals;i++) {
+    //     memcpy(&colCopy.values[i].val, &col.values[i].val, sizeof(Value));
     // }
-    memcpy(colCopy.values, col.values, sizeof(Value) * numVals);
 
     // printf("EXITING COPYCOL\n");
 
@@ -657,7 +667,17 @@ LoneValue* copyRow(Table* table, int rowNum) {
         // printf("\n%s\n", table->cols[i].name);
         // printType(table->cols[i].type);
         if(!rowCopy[i].value.isNULL) {
-            memcpy(&rowCopy[i].value.val, &table->cols[i].values[rowNum].val, sizeof(Value));
+            if(table->cols[i].type == INTEGER) {
+                rowCopy[i].value.val.INTEGER = table->cols[i].values[rowNum].val.INTEGER;
+            }
+            else if(table->cols[i].type == CHAR) {
+                rowCopy[i].value.val.CHAR = strdup(table->cols[i].values[rowNum].val.CHAR);
+            }
+            else if(table->cols[i].type == DECIMAL) {
+                rowCopy[i].value.val.DECIMAL = table->cols[i].values[rowNum].val.DECIMAL;
+            }
+
+            // memcpy(&rowCopy[i].value.val, &table->cols[i].values[rowNum].val, sizeof(Value));
             // rowCopy[i].value.val.CHAR = strdup(table->cols[i].values[rowNum].val.CHAR);
         }
         // printf("ANNUNCEATE\n");
@@ -2081,6 +2101,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                         printf("Which table would you like to copy a row from?\n");
                     else if(menuChoices[1] == 2)
                         printf("Which table would you like to copy a column from?\n");
+                    else if(menuChoices[1] == 3)
+                        printf("Which table would you like to copy?\n");
                     currTableIndex = tableMenu(numTables, tables);
                     currentTable = &tables[currTableIndex];
                     printf("Here is your current table:\n");
@@ -2103,9 +2125,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                         printf("Row #%d copied.\n", rowNum + 1);
 
                         break;
-                    case 2:
+                    case 2: {
                         // "2. COPY column in current table"
-                        char* colString;
+                        char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
                         printf("Please input the position of the column you would like to copy. (A-%s): ", intToLetter(currentTable->numCols - 1));
                         do {
@@ -2118,15 +2140,27 @@ Table* userTableOperator(int numTables, Table* tables) {
                         colCopy = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
                         colCopyLength = currentTable->numRows;
 
-                        printf("Column #%s copied.\n", colString);
+                        printf("Column %s copied.\n", colString);
+
+                        free(colString);
 
                         break;
+                    }
                     case 3:
                         // "3. Make a COPY of current table"
+                        numTables++;
+                        tables = realloc(tables, sizeof(Table) * numTables);
+                        currentTable = &tables[currTableIndex];
+                        tables[numTables - 1] = copyTable(*currentTable);
+
+                        printf("Table '%s' copied.\n", currentTable->name);
+
+                        currentTable = &tables[numTables - 1];
+                        currTableIndex = numTables - 1;
+
+                        checkTableNames(tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
-
-
 
                 break;
             case 10:
@@ -2511,13 +2545,13 @@ int typeInput(void) {
 
 void printType(int type) {
     if(type == CHAR)
-        printf("CHAR\n");
+        printf("CHAR");
     else if(type == INTEGER)
-        printf("INTEGER\n");
+        printf("INTEGER");
     else if(type == DECIMAL)
-        printf("DECIMAL\n");
+        printf("DECIMAL");
     else
-        printf("UNKOWN TYPE\n");
+        printf("UNKOWN TYPE");
 }
 
 void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex) {
