@@ -19,7 +19,6 @@ typedef struct {
 } Date;
 
 typedef enum {
-    vNULL = -1,
     CHAR = 0,
     INTEGER = 1,
     DECIMAL = 2,
@@ -31,16 +30,20 @@ typedef union {
     int INTEGER;
     double DECIMAL;
     Date DATE;
-    TypeEnum type;
 } ElementUnion;
 
-// typedef struct {
-//     ElementUnion val;
-//     TypeEnum type;
-// } Value;
+typedef struct {
+    ElementUnion val;
+    int isNULL;
+} Value;
 
 typedef struct {
-    ElementUnion* values;
+    Value value;
+    TypeEnum type;
+} LoneValue;
+
+typedef struct {
+    Value* values;
     char* name;
     TypeEnum type;
     // int notNull; //0 or 1 //take user input along with column name, ask for '-nn' right after the name.
@@ -77,7 +80,7 @@ typedef struct {
  * Direct SQL Function Simulations
 **/
 //Primary Keys, Foreign Keys, NOT NULL, and AUTOINCREMENT are something yet to be added.
-//Primary keys use hashtables in SQL, so we could do that here too.
+//Primary keys use hashtables in SQL, so could do that here too.
 Table create(char* tableName, int numCols, char** colNames, int* colTypes); //Implemented
 
 Table select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
@@ -135,6 +138,7 @@ void printType(int type); //Implemented
 int getRowIndex(Table table, char* colName, void* value);
 Table copyTable(Table table); //Implemented
 Column copyColumn(int numVals, Column col); //Implemented
+LoneValue* copyRow(Table* currentTable, int rowNum); //Implemented
 
 char* dateToString(Date date);
 Date stringToDate(char* dateString);
