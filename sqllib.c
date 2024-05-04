@@ -629,8 +629,6 @@ Table copyTable(Table table) {
 Column copyColumn(int numVals, Column col) {
     Column colCopy;
 
-    // printf("ENTERING COPYCOL\n");
-
     colCopy.name = strdup(col.name);
     colCopy.type = col.type;
     colCopy.values = malloc(sizeof(Value) * numVals);
@@ -648,24 +646,16 @@ Column copyColumn(int numVals, Column col) {
             }
         }
     }
-    // for(int i = 0; i < numVals;i++) {
-    //     memcpy(&colCopy.values[i].val, &col.values[i].val, sizeof(Value));
-    // }
-
-    // printf("EXITING COPYCOL\n");
 
     return colCopy;
 }
 
 LoneValue* copyRow(Table* table, int rowNum) {
 
-    LoneValue* rowCopy = malloc(sizeof(Value) * table->numCols);
+    LoneValue* rowCopy = malloc(sizeof(LoneValue) * table->numCols);
     for(int i = 0; i < table->numCols; i++) {
         rowCopy[i].value.isNULL = table->cols[i].values[rowNum].isNULL;
         rowCopy[i].type = table->cols[i].type;
-        // printType(table->cols[i].values[rowNum].type);
-        // printf("\n%s\n", table->cols[i].name);
-        // printType(table->cols[i].type);
         if(!rowCopy[i].value.isNULL) {
             if(table->cols[i].type == INTEGER) {
                 rowCopy[i].value.val.INTEGER = table->cols[i].values[rowNum].val.INTEGER;
@@ -676,14 +666,8 @@ LoneValue* copyRow(Table* table, int rowNum) {
             else if(table->cols[i].type == DECIMAL) {
                 rowCopy[i].value.val.DECIMAL = table->cols[i].values[rowNum].val.DECIMAL;
             }
-
-            // memcpy(&rowCopy[i].value.val, &table->cols[i].values[rowNum].val, sizeof(Value));
-            // rowCopy[i].value.val.CHAR = strdup(table->cols[i].values[rowNum].val.CHAR);
         }
-        // printf("ANNUNCEATE\n");
     }
-
-    // printf("I DID IT\n");
 
     return rowCopy;
 
