@@ -2101,20 +2101,25 @@ Table* userTableOperator(int numTables, Table* tables) {
                         rowCopy = copyRow(currentTable, rowNum);
                         rowCopyLength = currentTable->numCols;
                         printf("Row #%d copied.\n", rowNum + 1);
-                        // for(int i = 0; i < rowCopyLength; i++) {
-                        //     if(rowCopy[i].value.isNULL)
-                        //         printf("NULL ");
-                        //     else if(rowCopy[i].type == INTEGER)
-                        //         printf("%d ", rowCopy[i].value.val.INTEGER);
-                        //     else if(rowCopy[i].type == DECIMAL)
-                        //         printf("%lf ", rowCopy[i].value.val.DECIMAL);
-                        //     else if(rowCopy[i].type == CHAR)
-                        //         printf("%s ", rowCopy[i].value.val.CHAR);
-                        // }
 
                         break;
                     case 2:
                         // "2. COPY column in current table"
+                        char* colString;
+                        int colPos;
+                        printf("Please input the position of the column you would like to copy. (A-%s): ", intToLetter(currentTable->numCols - 1));
+                        do {
+                            fgetsUntil(colString, MAX_LEN);
+                            colPos = letterToInt(colString) - 1;
+                            if(colPos < 0 || colPos >= currentTable->numCols)
+                                printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols - 1));
+                        } while(colPos < 0 || colPos >= currentTable->numCols);
+
+                        colCopy = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
+                        colCopyLength = currentTable->numRows;
+
+                        printf("Column #%s copied.\n", colString);
+
                         break;
                     case 3:
                         // "3. Make a COPY of current table"
