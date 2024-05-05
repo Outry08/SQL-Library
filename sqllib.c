@@ -149,23 +149,28 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
         colName = strdup(colNames[i]);
         currCol = nameToCol(table, colName, NULL);
 
-        if(currCol.type == CHAR) {
-            // printf("CHAR VAL\n");
-            currCol.values[table->numRows - 1].isNULL = 0;
-            currCol.values[table->numRows - 1].val.CHAR = strdup((char*)values[i]);
-        }
-        else if(currCol.type == INTEGER) {
-            // printf("INTEGER VAL\n");
-            currCol.values[table->numRows - 1].isNULL = 0;
-            currCol.values[table->numRows - 1].val.INTEGER = *(int*)values[i];
-        }
-        else if(currCol.type == DECIMAL) {
-            // printf("DECIMAL VAL\n");
-            currCol.values[table->numRows - 1].isNULL = 0;
-            currCol.values[table->numRows - 1].val.DECIMAL = *(double*)values[i];
+        if(values[i] == NULL) {
+            currCol.values[table->numRows - 1].isNULL = 1;
         }
         else {
-            printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
+            if(currCol.type == CHAR) {
+                // printf("CHAR VAL\n");
+                currCol.values[table->numRows - 1].isNULL = 0;
+                currCol.values[table->numRows - 1].val.CHAR = strdup((char*)values[i]);
+            }
+            else if(currCol.type == INTEGER) {
+                // printf("INTEGER VAL\n");
+                currCol.values[table->numRows - 1].isNULL = 0;
+                currCol.values[table->numRows - 1].val.INTEGER = *(int*)values[i];
+            }
+            else if(currCol.type == DECIMAL) {
+                // printf("DECIMAL VAL\n");
+                currCol.values[table->numRows - 1].isNULL = 0;
+                currCol.values[table->numRows - 1].val.DECIMAL = *(double*)values[i];
+            }
+            else {
+                printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
+            }
         }
 
         free(colName);
@@ -191,48 +196,45 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
 
     for(int i = 0; i < table->numCols; i++) {
         table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
-        for(int j = table->numRows - 1; j >= rowNum; j--) {
-            memcpy(&table->cols[i].values[j + 1], &table->cols[i].values[j], sizeof(Value));
+        for(int j = table->numRows - 2; j >= rowNum; j--) {
+            // memcpy(&table->cols[i].values[j + 1], &table->cols[i].values[j], sizeof(Value));
+            table->cols[i].values[j + 1].isNULL = table->cols[i].values[j].isNULL;
 
-            // if(table->cols[i].type == INTEGER) {
-            //     table->cols[i].values[j + 1].type = table->cols[i].values[j].type;
-            //     table->cols[i].values[j + 1].INTEGER = table->cols[i].values[j].INTEGER;
-            // }
-            // else if(table->cols[i].type == DECIMAL) {
-            //     table->cols[i].values[j + 1].type = table->cols[i].values[j].type;
-            //     table->cols[i].values[j + 1].INTEGER = table->cols[i].values[j].DECIMAL;
-            // }
-            // else if(table->cols[i].type == CHAR) {
-            //     table->cols[i].values[j + 1].type = table->cols[i].values[j].type;
-            //     table->cols[i].values[j + 1].CHAR = strdup(table->cols[i].values[j].CHAR);
-            // }
+            if(!table->cols[i].values[j + 1].isNULL) {
+                if(table->cols[i].type == INTEGER) {
+                    table->cols[i].values[j + 1].val.INTEGER = table->cols[i].values[j].val.INTEGER;
+                }
+                else if(table->cols[i].type == DECIMAL) {
+                    table->cols[i].values[j + 1].val.DECIMAL = table->cols[i].values[j].val.DECIMAL;
+                }
+                else if(table->cols[i].type == CHAR) {
+                    table->cols[i].values[j + 1].val.CHAR = strdup(table->cols[i].values[j].val.CHAR);
+                }
+            }
         }
-
-        table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
         table->cols[i].values[rowNum].isNULL = 1;
     }
 
     for(int i = 0; i < numValues; i++) {
         colName = strdup(colNames[i]);
         currCol = nameToCol(table, colName, NULL);
-
-        if(currCol.type == CHAR) {
-            // printf("CHAR VAL\n");
-            currCol.values[rowNum].isNULL = 0;
-            currCol.values[rowNum].val.CHAR = strdup((char*)values[i]);
-        }
-        else if(currCol.type == INTEGER) {
-            // printf("INTEGER VAL\n");
-            currCol.values[rowNum].isNULL = 0;
-            currCol.values[rowNum].val.INTEGER = *(int*)values[i];
-        }
-        else if(currCol.type == DECIMAL) {
-            // printf("DECIMAL VAL\n");
-            currCol.values[rowNum].isNULL = 0;
-            currCol.values[rowNum].val.DECIMAL = *(double*)values[i];
+        if(values[i] == NULL) {
+            currCol.values[table->numRows - 1].isNULL = 1;
         }
         else {
-            printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
+            currCol.values[rowNum].isNULL = 0;
+            if(currCol.type == CHAR) {
+                currCol.values[rowNum].val.CHAR = strdup((char*)values[i]);
+            }
+            else if(currCol.type == INTEGER) {
+                currCol.values[rowNum].val.INTEGER = *(int*)values[i];
+            }
+            else if(currCol.type == DECIMAL) {
+                currCol.values[rowNum].val.DECIMAL = *(double*)values[i];
+            }
+            else {
+                printf("Error: Nonexistent column name, \"%s\", provided.\n", colName);
+            }
         }
 
         free(colName);
@@ -253,20 +255,25 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
     }
 
     for(int i = 0; i < numValues; i++) {
-        if(colType == CHAR) {
-            table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
-            table->cols[table->numCols - 1].values[rowNums[i]].val.CHAR = strdup((char*)values[i]);
-        }
-        else if(colType == INTEGER) {
-            table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
-            table->cols[table->numCols - 1].values[rowNums[i]].val.INTEGER = *(int*)values[i];
-        }
-        else if(colType == DECIMAL) {
-            table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
-            table->cols[table->numCols - 1].values[rowNums[i]].val.DECIMAL = *(double*)values[i];
+        if(values[i] == NULL) {
+            table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 1;
         }
         else {
-            printf("Error: Nonexistent row number, \"%d\", provided.\n", rowNums[i]);
+            if(colType == CHAR) {
+                table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
+                table->cols[table->numCols - 1].values[rowNums[i]].val.CHAR = strdup((char*)values[i]);
+            }
+            else if(colType == INTEGER) {
+                table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
+                table->cols[table->numCols - 1].values[rowNums[i]].val.INTEGER = *(int*)values[i];
+            }
+            else if(colType == DECIMAL) {
+                table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 0;
+                table->cols[table->numCols - 1].values[rowNums[i]].val.DECIMAL = *(double*)values[i];
+            }
+            else {
+                printf("Error: Nonexistent row number, \"%d\", provided.\n", rowNums[i]);
+            }
         }
 
     }
@@ -299,20 +306,25 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
     }
 
     for(int i = 0; i < numValues; i++) {
-        if(colType == CHAR) {
-            table->cols[colNum].values[rowNums[i]].isNULL = 0;
-            table->cols[colNum].values[rowNums[i]].val.CHAR = strdup((char*)values[i]);
-        }
-        else if(colType == INTEGER) {
-            table->cols[colNum].values[rowNums[i]].isNULL = 0;
-            table->cols[colNum].values[rowNums[i]].val.INTEGER = *(int*)values[i];
-        }
-        else if(colType == DECIMAL) {
-            table->cols[colNum].values[rowNums[i]].isNULL = 0;
-            table->cols[colNum].values[rowNums[i]].val.DECIMAL = *(double*)values[i];
+        if(values[i] == NULL) {
+            table->cols[table->numCols - 1].values[rowNums[i]].isNULL = 1;
         }
         else {
-            printf("Error: Nonexistent row number, \"%d\", provided.\n", rowNums[i]);
+            if(colType == CHAR) {
+                table->cols[colNum].values[rowNums[i]].isNULL = 0;
+                table->cols[colNum].values[rowNums[i]].val.CHAR = strdup((char*)values[i]);
+            }
+            else if(colType == INTEGER) {
+                table->cols[colNum].values[rowNums[i]].isNULL = 0;
+                table->cols[colNum].values[rowNums[i]].val.INTEGER = *(int*)values[i];
+            }
+            else if(colType == DECIMAL) {
+                table->cols[colNum].values[rowNums[i]].isNULL = 0;
+                table->cols[colNum].values[rowNums[i]].val.DECIMAL = *(double*)values[i];
+            }
+            else {
+                printf("Error: Nonexistent row number, \"%d\", provided.\n", rowNums[i]);
+            }
         }
 
     }
@@ -472,26 +484,28 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
                         // if(table->cols[l].type == CHAR)
                         //     printf("%s => %s\n", table->cols[l].values[m].CHAR, table->cols[l].values[m + 1].CHAR);
 
-                        memcpy(&table->cols[l].values[m], &table->cols[l].values[m + 1], sizeof(Value));
+                        // memcpy(&table->cols[l].values[m], &table->cols[l].values[m + 1], sizeof(Value));
+                        table->cols[l].values[m].isNULL = table->cols[l].values[m + 1].isNULL;
 
-                        // if(table->cols[l].type == INTEGER) {
-                        //     table->cols[l].values[m].isNULL = 0;
-                        //     table->cols[l].values[m].INTEGER = table->cols[l].values[m + 1].INTEGER;
-                        // }
-                        // else if(table->cols[l].type == DECIMAL) {
-                        //     table->cols[l].values[m].isNULL = 0;
-                        //     table->cols[l].values[m].INTEGER = table->cols[l].values[m + 1].DECIMAL;
-                        // }
-                        // else if(table->cols[l].type == CHAR) {
-                        //     table->cols[l].values[m].isNULL = 0;
-                        //     table->cols[l].values[m].CHAR = strdup(table->cols[l].values[m + 1].CHAR);
-                        // }
+                        if(!table->cols[l].values[m].isNULL) {
+                            if(table->cols[l].type == INTEGER) {
+                                table->cols[l].values[m].val.INTEGER = table->cols[l].values[m + 1].val.INTEGER;
+                            }
+                            else if(table->cols[l].type == DECIMAL) {
+                                table->cols[l].values[m].val.DECIMAL = table->cols[l].values[m + 1].val.DECIMAL;
+                            }
+                            else if(table->cols[l].type == CHAR) {
+                                table->cols[l].values[m].val.CHAR = strdup(table->cols[l].values[m + 1].val.CHAR);
+                            }
+                        }
                     }
                 }
                 table->numRows--;
-                if(k + 1 < numPrevGoodJs)
-                    if(prevGoodJs[k + 1] > prevGoodJs[k])
-                        prevGoodJs[k + 1]--;
+                for(int l = k + 1; l < numPrevGoodJs; l++)
+                    if(prevGoodJs[l] > prevGoodJs[k])
+                        prevGoodJs[l]--;
+
+
             }
         }
         free(prevGoodJs);
@@ -656,6 +670,7 @@ LoneValue* copyRow(Table* table, int rowNum) {
     for(int i = 0; i < table->numCols; i++) {
         rowCopy[i].value.isNULL = table->cols[i].values[rowNum].isNULL;
         rowCopy[i].type = table->cols[i].type;
+        rowCopy[i].colName = strdup(table->cols[i].name);
         if(!rowCopy[i].value.isNULL) {
             if(table->cols[i].type == INTEGER) {
                 rowCopy[i].value.val.INTEGER = table->cols[i].values[rowNum].val.INTEGER;
@@ -720,12 +735,13 @@ char* notConnectives(int numConns, char* conns) {
 
 Column nameToCol(Table* table, char* colName, int* colIndex) {
 
-    for(int i = 0; i < table->numCols; i++)
+    for(int i = 0; i < table->numCols; i++) {
         if(strcmp(table->cols[i].name, colName) == 0) {
             if(colIndex != NULL)
                 *colIndex = i;
             return table->cols[i];
         }
+    }
 
     Column errCol;
     errCol.name = "COL NOT FOUND";
@@ -735,6 +751,14 @@ Column nameToCol(Table* table, char* colName, int* colIndex) {
     printf("Error: Failed to find column '%s' in table '%s'\n", colName, table->name);
 
     return errCol;
+}
+
+int containsCol(Table table, char* colName) {
+    for(int i = 0; i < table.numCols; i++)
+        if(strcmp(table.cols[i].name, colName) == 0)
+            return 1;
+
+    return 0;
 }
 
 int compare(Column column, int valIndex, char* comparison, void* value) {
@@ -1164,6 +1188,14 @@ void printRow(Table table, int rowIndex) {
 
 void printLoneRow(LoneValue* row, int numValues) {
     printf("\t");
+
+    for(int i = 0; i < numValues; i++) {
+        printf(" | ");
+        printf("%s", row[i].colName);
+    }
+
+    printf(" | \n\t");
+
     for(int i = 0; i < numValues; i++) {
         printf(" | ");
         if(row[i].value.isNULL) {
@@ -1291,9 +1323,10 @@ Table* userTableOperator(int numTables, Table* tables) {
 
     Select sel;
 
-    LoneValue* rowCopy;
+    LoneValue* rowCopy = NULL;
     int rowCopyLength;
     Column colCopy;
+    colCopy.name = NULL;
     int colCopyLength;
 
     printf("\t\t-- Welcome to CQL! --\n");
@@ -1375,6 +1408,27 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printf("There are no tables to print.\n");
                         break;
 
+                    case 3:
+                        // "3. PRINT copied row"
+                        if(rowCopy != NULL) {
+                            printf("The row you currently have copied:\n");
+                            printLoneRow(rowCopy, rowCopyLength);
+                        }
+                        else {
+                            printf("You do not have a row copied at the moment.\n");
+                        }
+                        break;
+
+                    case 4:
+                        // "4. PRINT copied column"
+                        if(colCopy.name != NULL) {
+                            printf("The column you currently have copied:\n");
+                            printColumn(colCopy, colCopyLength);
+                        }
+                        else {
+                            printf("You do not have a column copied at the moment.\n");
+                        }
+                        break;
                 }
                 break;
 
@@ -1435,7 +1489,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                     printTable(*currentTable);
                 }
 
-                printf("How many columns would you like to select?: ");
+                printf("How many columns would you like to select? (1-%d): ", currentTable->numCols);
                 do {
                     scanfWell("%d", &sel.numCols);
                     if(sel.numCols <= 0)
@@ -1517,6 +1571,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                 free(connectiveList);
                 whereList = NULL;
                 connectiveList = NULL;
+
+                checkTableNames(tables, numTables, currentTable->name, currTableIndex);
+
                 break;
 
             case 6:
@@ -1553,7 +1610,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     nameList[i] = malloc(sizeof(char) * MAX_LEN);
 
                                     do {
-                                        printf("Name for select column #%d: ", i + 1);
+                                        printf("Name for column to provide value for #%d: ", i + 1);
                                         fgetsUntil(nameList[i], MAX_LEN);
                                         if(nameToCol(currentTable, nameList[i], NULL).type == -1)
                                             continue;
@@ -1566,8 +1623,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     printf("New value for %s (of type ", nameList[i]);
                                     printType(nameToCol(currentTable, nameList[i], NULL).type);
                                     printf("): ");
-
-
 
                                     if(nameToCol(currentTable, nameList[i], NULL).type == INTEGER) {
                                         valueList[i] = malloc(sizeof(int));
@@ -2226,6 +2281,183 @@ Table* userTableOperator(int numTables, Table* tables) {
                 switch(menuChoices[1]) {
                     case 1:
                         // "1. PASTE row in current table"
+                        if(rowCopy != NULL) {
+                            int typeMatch = 1;
+                            int colNameMatch = 0;
+                            int proceed = 0;
+
+                            for(int i = 0; i < min(currentTable->numCols, rowCopyLength); i++) {
+                                if(typeMatch && currentTable->cols[i].type != rowCopy[i].type)
+                                    typeMatch = 0;
+                                if(!colNameMatch && containsCol(*currentTable, rowCopy[i].colName))
+                                    colNameMatch = 1;
+                                if(!typeMatch && colNameMatch)
+                                    break;
+                            }
+
+                            if(colNameMatch) {
+                                printf("Your copied row shares at least one column name with your current table.\n"
+                                    "Would you like to paste this row with respect to the column names?\n"
+                                    "(You will otherwise paste with respect to the column types and the current ordering of the columns and your row)\n"
+                                    "(yes / no): ");
+                                do {
+                                    fgetsUntil(yesno, MAX_LEN);
+                                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                        printf("Please input 'yes' or 'no': ");
+                                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                                if(strcmp(yesno, "yes") == 0) {
+                                    proceed = 1;
+
+                                    int numCommonNames = 0;
+                                    int includeMissing = 0;
+
+                                    for(int i = 0; i < rowCopyLength; i++) {
+                                        numCommonNames += containsCol(*currentTable, rowCopy[i].colName);
+                                    }
+                                    if(numCommonNames < rowCopyLength) {
+                                        printf("Would you like to include the values that do not share a column name in your paste?\n"
+                                            "(This will expand your table and insert the missing columns)\n"
+                                            "(yes / no): ");
+                                        do {
+                                            fgetsUntil(yesno, MAX_LEN);
+                                            if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                                printf("Please input 'yes' or 'no': ");
+                                        } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                                        if(strcmp(yesno, "yes") == 0)
+                                            includeMissing = 1;
+                                    }
+
+                                    nameList = malloc(sizeof(char*) * (numCommonNames + (rowCopyLength - numCommonNames) * includeMissing));
+                                    valueList = malloc(sizeof(void*) * (numCommonNames + (rowCopyLength - numCommonNames) * includeMissing));
+                                    int count = 0;
+
+                                    for(int i = 0; i < rowCopyLength; i++) {
+                                        if(includeMissing && !containsCol(*currentTable, rowCopy[i].colName)) {
+                                            insertCol(currentTable, rowCopy[i].colName, rowCopy[i].type, 0, NULL, NULL);
+                                        }
+                                        if(containsCol(*currentTable, rowCopy[i].colName)) {
+                                            nameList[count] = strdup(rowCopy[i].colName);
+                                            if(rowCopy[i].type == INTEGER) {
+                                                valueList[count] = malloc(sizeof(int));
+                                                memcpy(valueList[count], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                            }
+                                            else if(rowCopy[i].type == DECIMAL) {
+                                                valueList[count] = malloc(sizeof(double));
+                                                memcpy(valueList[count], &rowCopy[i].value.val.DECIMAL, sizeof(double));
+                                            }
+                                            else if(rowCopy[i].type == CHAR) {
+                                                valueList[count] = strdup(rowCopy[i].value.val.CHAR);
+                                            }
+                                            count++;
+                                        }
+                                    }
+
+                                }
+                            }
+
+                            if(!proceed && typeMatch) {
+
+                                proceed = 1;
+
+                                if(rowCopyLength >= currentTable->numCols) {
+                                    valueList = malloc(sizeof(void*) * rowCopyLength);
+
+                                    for(int i = 0; i < rowCopyLength; i++) {
+                                        if(rowCopy[i].type == INTEGER) {
+                                            valueList[i] = malloc(sizeof(int));
+                                            memcpy(valueList[i], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                        }
+                                        else if(rowCopy[i].type == DECIMAL) {
+                                            valueList[i] = malloc(sizeof(double));
+                                            memcpy(valueList[i], &rowCopy[i].value.val.DECIMAL, sizeof(double));
+                                        }
+                                        else if(rowCopy[i].type == CHAR) {
+                                            valueList[i] = strdup(rowCopy[i].value.val.CHAR);
+                                        }
+                                    }
+                                }
+                                else {
+                                    valueList = malloc(sizeof(void*) * currentTable->numCols);
+
+                                    for(int i = 0; i < currentTable->numCols; i++) {
+                                        if(i < rowCopyLength) {
+                                            if(rowCopy[i].type == INTEGER) {
+                                                valueList[i] = malloc(sizeof(int));
+                                                memcpy(valueList[i], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                            }
+                                            else if(rowCopy[i].type == DECIMAL) {
+                                                valueList[i] = malloc(sizeof(double));
+                                                memcpy(valueList[i], &rowCopy[i].value.val.DECIMAL, sizeof(double));
+                                            }
+                                            else if(rowCopy[i].type == CHAR) {
+                                                valueList[i] = strdup(rowCopy[i].value.val.CHAR);
+                                            }
+                                        }
+                                        else {
+                                            valueList[i] = NULL;
+                                        }
+                                    }
+                                }
+
+
+                                if(currentTable->numCols < rowCopyLength) {
+                                    printf("How would you like to paste?:\n");
+                                    printf("1. Shrink row to fit table\n"
+                                        "2. Grow table to fit row\n"
+                                        "Your choice: ");
+
+                                    do {
+                                        scanfWell("%d", &menuChoices[1]);
+                                        if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                            printf("Please choose between 1 and %d: ", 2);
+                                    } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+
+                                    if(menuChoices[1] == 2) {
+                                        int numColsNeeded = rowCopyLength - currentTable->numCols;
+                                        printf("You need %d extra columns.\n", numColsNeeded);
+
+                                        for(int i = 0; i < numColsNeeded; i++) {
+                                            // printf("Name for new column #%d: ", i + 1);
+                                            // fgetsUntil(colName, MAX_LEN);
+                                            insertCol(currentTable, rowCopy[currentTable->numCols].colName, rowCopy[currentTable->numCols].type, 0, NULL, NULL);
+                                        }
+                                    }
+                                }
+
+                                nameList = malloc(sizeof(char*) * currentTable->numCols);
+
+                                for(int i = 0; i < currentTable->numCols;i++) {
+                                    nameList[i] = strdup(currentTable->cols[i].name);
+                                }
+
+
+
+                            }
+
+                            if(proceed) {
+                                if(currentTable->numRows > 0) {
+                                    printf("Which row would you like to paste into? (1-%d): ", currentTable->numRows + 1);
+                                    do {
+                                        scanfWell("%d", &rowNum);
+                                        if(rowNum < 1 || rowNum > currentTable->numRows + 1)
+                                            printf("Please input a valid row number. (1-%d): ", currentTable->numRows + 1);
+                                    } while(rowNum < 1 || rowNum > currentTable->numRows + 1);
+
+                                    insertIntoRow(currentTable, currentTable->numCols, nameList, valueList, rowNum);
+                                }
+                                else
+                                    insertRow(currentTable, currentTable->numCols, nameList, valueList);
+                            }
+
+                            else {
+                                printf("The current ordering of datatypes in your copied row does not match the ordering of datatypes in your current table.\nPasting not possible.\n");
+                            }
+                        }
+                        else {
+                            printf("You currently do not have a row copied.\n");
+                        }
                         break;
                     case 2:
                         // "2. PASTE column in current table"
@@ -2311,7 +2543,7 @@ int* actionMenu(Table* table) {
             "12. IMPORT\n"
             "13. EXPORT\n"
             "0. EXIT\n"
-            "Your choice : ");
+            "Your choice: ");
         do {
             scanfWell("%d", &menuChoices[0]);
             if(menuChoices[0] < 0 || menuChoices[0] > 13)
@@ -2326,8 +2558,10 @@ int* actionMenu(Table* table) {
 
             case 2:
                 printf("1. PRINT the Master Table\n"
-                    "2. PRINT a table\n");
-                numOptions = 2;
+                    "2. PRINT a table\n"
+                    "3. PRINT copied row\n"
+                    "4. PRINT copied column\n");
+                numOptions = 4;
                 break;
 
             case 3:
@@ -2353,7 +2587,7 @@ int* actionMenu(Table* table) {
                 break;
 
             case 7:
-                printf("1. UPDATE an existing value in current table\n");
+                printf("1. UPDATE existing values in current table\n");
                 numOptions = 1;
                 break;
 
@@ -2404,7 +2638,7 @@ int* actionMenu(Table* table) {
 
         }
         printf("0. Back\n"
-            "Your choice : ");
+            "Your choice: ");
         do {
             scanfWell("%d", &menuChoices[1]);
             if(menuChoices[1] < 0 || menuChoices[1] > numOptions)
@@ -2438,7 +2672,7 @@ int* actionMenu(Table* table) {
     //     "24. EXPORT Table(s) to .db File\n"
     //     "0. SAVE & EXIT\n"
     //     "-1. EXIT WITHOUT SAVING\n"
-    //     "Your choice : ");
+    //     "Your choice: ");
     // do {
     //     scanfWell("%d", &menuChoices[1]);
     //     if(menuChoices[1] < -1 || menuChoices[1] > 24)
@@ -2546,7 +2780,7 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
         (*whereList)[numWheres - 1].comparison = realloc((*whereList)[numWheres - 1].comparison, sizeof(char) * (strlen((*whereList)[numWheres - 1].comparison) + 1));
 
         if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName, NULL).type == INTEGER) {
-            printf("Please input the integer value you are looking for: ");
+            printf("Please input the integer value you are looking for (NULL = 0): ");
             (*whereList)[numWheres - 1].searchValue = malloc(sizeof(int));
             scanfWell("%d", (*whereList)[numWheres - 1].searchValue);
         }
@@ -2558,7 +2792,7 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
             // printf("%s\n", (*whereList)[numWheres - 1].searchValue);
         }
         else if(nameToCol(currentTable, (*whereList)[numWheres - 1].searchColName, NULL).type == DECIMAL) {
-            printf("Please input the decimal value you are looking for: ");
+            printf("Please input the decimal value you are looking for (NULL = 0): ");
             (*whereList)[numWheres - 1].searchValue = malloc(sizeof(double));
             scanfWell("%lf", (*whereList)[numWheres - 1].searchValue);
         }

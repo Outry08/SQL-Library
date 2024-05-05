@@ -7,6 +7,7 @@
 #include <math.h>
 #include <ctype.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
+#define min(a, b) ((a) > (b) ? (b) : (a))
 #define MAX_LEN 50
 
 typedef struct {
@@ -40,6 +41,7 @@ typedef struct {
 typedef struct {
     Value value;
     TypeEnum type;
+    char* colName;
 } LoneValue;
 
 typedef struct {
@@ -100,9 +102,8 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
 void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values); //Implemented
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName);
+void deleteRow(Table* table, int rowNum);
 int getValIndex(Column col, void* value);
-void swapRows(Table* table, int index1, int index2);
-void swapCols(Table* table, char* colName1, int colName2);
 
 /**
  * C Types to SQL Table Types and Vice Versa
@@ -118,6 +119,7 @@ void** tableToMatrix(void);
  * Helper Functions
 **/
 Column nameToCol(Table* table, char* colName, int* colIndex); //Implemented
+int containsCol(Table table, char* colName); //Implemented
 
 int compare(Column column, int valIndex, char* comparison, void* value); //Implemented
 char* oppComp(char* comparison); //Implemented
