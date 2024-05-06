@@ -329,6 +329,8 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
 
     }
 
+    checkColumnNames(*table, table->cols[colNum].name, colNum);
+
 }
 
 /**
@@ -1708,7 +1710,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         printf("Please input the name of the new column: ");
                         fgetsUntil(colName, MAX_LEN);
 
-                        checkColumnNames(*currentTable, colName, currentTable->numCols);
+                        // checkColumnNames(*currentTable, colName, currentTable->numCols);
 
                         printf("What type should this column be?:\n");
                         colType = typeInput();
@@ -2198,8 +2200,13 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 }
                 break;
+
             case 9:
-                //"9. COPY"
+                //"9. SORT"
+                break;
+
+            case 10:
+                //"10. COPY"
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
@@ -2226,7 +2233,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                             if(--rowNum < 0 || rowNum > currentTable->numRows - 1)
                                 printf("Please input a number between 1 and %d: ", currentTable->numRows);
                         } while(rowNum < 0 || rowNum > currentTable->numRows - 1);
-
 
                         rowCopy = copyRow(currentTable, rowNum);
                         rowCopyLength = currentTable->numCols;
@@ -2275,8 +2281,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 break;
-            case 10:
-                //"10. PASTE"
+            case 11:
+                //"11. PASTE"
 
                 switch(menuChoices[1]) {
                     case 1:
@@ -2339,16 +2345,21 @@ Table* userTableOperator(int numTables, Table* tables) {
                                         }
                                         if(containsCol(*currentTable, rowCopy[i].colName)) {
                                             nameList[count] = strdup(rowCopy[i].colName);
-                                            if(rowCopy[i].type == INTEGER) {
-                                                valueList[count] = malloc(sizeof(int));
-                                                memcpy(valueList[count], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                            if(!rowCopy[i].value.isNULL) {
+                                                if(rowCopy[i].type == INTEGER) {
+                                                    valueList[count] = malloc(sizeof(int));
+                                                    memcpy(valueList[count], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                                }
+                                                else if(rowCopy[i].type == DECIMAL) {
+                                                    valueList[count] = malloc(sizeof(double));
+                                                    memcpy(valueList[count], &rowCopy[i].value.val.DECIMAL, sizeof(double));
+                                                }
+                                                else if(rowCopy[i].type == CHAR) {
+                                                    valueList[count] = strdup(rowCopy[i].value.val.CHAR);
+                                                }
                                             }
-                                            else if(rowCopy[i].type == DECIMAL) {
-                                                valueList[count] = malloc(sizeof(double));
-                                                memcpy(valueList[count], &rowCopy[i].value.val.DECIMAL, sizeof(double));
-                                            }
-                                            else if(rowCopy[i].type == CHAR) {
-                                                valueList[count] = strdup(rowCopy[i].value.val.CHAR);
+                                            else {
+                                                valueList[count] = NULL;
                                             }
                                             count++;
                                         }
@@ -2365,24 +2376,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     valueList = malloc(sizeof(void*) * rowCopyLength);
 
                                     for(int i = 0; i < rowCopyLength; i++) {
-                                        if(rowCopy[i].type == INTEGER) {
-                                            valueList[i] = malloc(sizeof(int));
-                                            memcpy(valueList[i], &rowCopy[i].value.val.INTEGER, sizeof(int));
-                                        }
-                                        else if(rowCopy[i].type == DECIMAL) {
-                                            valueList[i] = malloc(sizeof(double));
-                                            memcpy(valueList[i], &rowCopy[i].value.val.DECIMAL, sizeof(double));
-                                        }
-                                        else if(rowCopy[i].type == CHAR) {
-                                            valueList[i] = strdup(rowCopy[i].value.val.CHAR);
-                                        }
-                                    }
-                                }
-                                else {
-                                    valueList = malloc(sizeof(void*) * currentTable->numCols);
-
-                                    for(int i = 0; i < currentTable->numCols; i++) {
-                                        if(i < rowCopyLength) {
+                                        if(!rowCopy[i].value.isNULL) {
                                             if(rowCopy[i].type == INTEGER) {
                                                 valueList[i] = malloc(sizeof(int));
                                                 memcpy(valueList[i], &rowCopy[i].value.val.INTEGER, sizeof(int));
@@ -2393,6 +2387,33 @@ Table* userTableOperator(int numTables, Table* tables) {
                                             }
                                             else if(rowCopy[i].type == CHAR) {
                                                 valueList[i] = strdup(rowCopy[i].value.val.CHAR);
+                                            }
+                                        }
+                                        else {
+                                            valueList[i] = NULL;
+                                        }
+                                    }
+                                }
+                                else {
+                                    valueList = malloc(sizeof(void*) * currentTable->numCols);
+
+                                    for(int i = 0; i < currentTable->numCols; i++) {
+                                        if(i < rowCopyLength) {
+                                            if(!rowCopy[i].value.isNULL) {
+                                                if(rowCopy[i].type == INTEGER) {
+                                                    valueList[i] = malloc(sizeof(int));
+                                                    memcpy(valueList[i], &rowCopy[i].value.val.INTEGER, sizeof(int));
+                                                }
+                                                else if(rowCopy[i].type == DECIMAL) {
+                                                    valueList[i] = malloc(sizeof(double));
+                                                    memcpy(valueList[i], &rowCopy[i].value.val.DECIMAL, sizeof(double));
+                                                }
+                                                else if(rowCopy[i].type == CHAR) {
+                                                    valueList[i] = strdup(rowCopy[i].value.val.CHAR);
+                                                }
+                                            }
+                                            else {
+                                                valueList[i] = NULL;
                                             }
                                         }
                                         else {
@@ -2419,8 +2440,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                                         printf("You need %d extra columns.\n", numColsNeeded);
 
                                         for(int i = 0; i < numColsNeeded; i++) {
-                                            // printf("Name for new column #%d: ", i + 1);
-                                            // fgetsUntil(colName, MAX_LEN);
                                             insertCol(currentTable, rowCopy[currentTable->numCols].colName, rowCopy[currentTable->numCols].type, 0, NULL, NULL);
                                         }
                                     }
@@ -2431,9 +2450,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 for(int i = 0; i < currentTable->numCols;i++) {
                                     nameList[i] = strdup(currentTable->cols[i].name);
                                 }
-
-
-
                             }
 
                             if(proceed) {
@@ -2461,25 +2477,88 @@ Table* userTableOperator(int numTables, Table* tables) {
                         break;
                     case 2:
                         // "2. PASTE column in current table"
+                        if(colCopy.name != NULL) {
+                            if(colCopyLength > currentTable->numRows) {
+                                printf("How would you like to paste?:\n");
+                                printf("1. Shrink column to fit table\n"
+                                    "2. Grow table to fit column\n"
+                                    "Your choice: ");
+
+                                do {
+                                    scanfWell("%d", &menuChoices[1]);
+                                    if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                        printf("Please choose between 1 and %d: ", 2);
+                                } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+
+                                if(menuChoices[1] == 2) {
+                                    int numRowsMissing = colCopyLength - currentTable->numRows;
+                                    for(int i = 0; i < numRowsMissing; i++) {
+                                        insertRow(currentTable, 0, NULL, NULL);
+                                    }
+                                }
+                            }
+
+                            numThings = min(currentTable->numRows, colCopyLength);
+
+                            numList = malloc(sizeof(int) * numThings);
+                            valueList = malloc(sizeof(void*) * numThings);
+
+                            for(int i = 0; i < numThings; i++) {
+                                numList[i] = i;
+                                if(!colCopy.values[i].isNULL) {
+                                    if(colCopy.type == INTEGER) {
+                                        valueList[i] = malloc(sizeof(int));
+                                        memcpy(valueList[i], &colCopy.values[i].val.INTEGER, sizeof(int));
+                                    }
+                                    else if(colCopy.type == DECIMAL) {
+                                        valueList[i] = malloc(sizeof(double));
+                                        memcpy(valueList[i], &colCopy.values[i].val.DECIMAL, sizeof(double));
+                                    }
+                                    else if(colCopy.type == CHAR) {
+                                        valueList[i] = strdup(colCopy.values[i].val.CHAR);
+                                    }
+                                }
+                                else {
+                                    valueList[i] = NULL;
+                                }
+
+                            }
+
+                            char colString[MAX_LEN];
+                            int colPos;
+
+                            printf("Which column position would you like to insert into? (A-%s): ", intToLetter(currentTable->numCols));
+                            do {
+                                fgetsUntil(colString, MAX_LEN);
+                                colPos = letterToInt(colString) - 1;
+                                if(colPos < 0 || colPos > currentTable->numCols)
+                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                            } while(colPos < 0 || colPos > currentTable->numCols);
+
+                            insertIntoCol(currentTable, colCopy.name, colCopy.type, numThings, numList, valueList, colString);
+
+                        }
+                        else {
+                            printf("You currently do not have a column copied.\n");
+                        }
                         break;
                 }
 
-
                 break;
-            case 11:
-                //"11. DELETE"
+            case 12:
+                //"12. DELETE"
                 // "1. DELETE row(s) from current table"
                 // "2. DELETE column(s) from current table"
                 // "3. DELETE value(s) from current table"
                 // "4. DELETE current table"
                 break;
-            case 12:
-                //"12. IMPORT"
+            case 13:
+                //"13. IMPORT"
                 // "1. IMPORT database from .sql File"
                 // "2. IMPORT database from .db File"
                 break;
-            case 13:
-                //"13. EXPORT"
+            case 14:
+                //"14. EXPORT"
                 // "1. EXPORT database to .SQL File"
                 // "2. EXPORT database to .db File"
                 break;
@@ -2537,11 +2616,12 @@ int* actionMenu(Table* table) {
             "6. INSERT\n"
             "7. UPDATE\n"
             "8. MOVE\n"
-            "9. COPY\n"
-            "10. PASTE\n"
-            "11. DELETE\n"
-            "12. IMPORT\n"
-            "13. EXPORT\n"
+            "9. SORT\n"
+            "10. COPY\n"
+            "11. PASTE\n"
+            "12. DELETE\n"
+            "13. IMPORT\n"
+            "14. EXPORT\n"
             "0. EXIT\n"
             "Your choice: ");
         do {
@@ -2598,19 +2678,25 @@ int* actionMenu(Table* table) {
                 break;
 
             case 9:
+                printf("1. SORT rows by the values of a column\n"
+                    "SORT columns by the values of a row\n");
+                numOptions = 2;
+                break;
+
+            case 10:
                 printf("1. COPY row in current table\n"
                     "2. COPY column in current table\n"
                     "3. Make a COPY of current table\n");
                 numOptions = 3;
                 break;
 
-            case 10:
+            case 11:
                 printf("1. PASTE row into current table\n"
                     "2. PASTE column into current table\n");
                 numOptions = 2;
                 break;
 
-            case 11:
+            case 12:
                 printf("1. DELETE row(s) from current table\n"
                     "2. DELETE column(s) from current table\n"
                     "3. DELETE value(s) from current table\n"
@@ -2618,13 +2704,13 @@ int* actionMenu(Table* table) {
                 numOptions = 4;
                 break;
 
-            case 12:
+            case 13:
                 printf("1. IMPORT database from .sql File\n"
                     "2. IMPORT database from .db File\n");
                 numOptions = 2;
                 break;
 
-            case 13:
+            case 14:
                 printf("1. EXPORT database to .SQL File\n"
                     "2. EXPORT database to .db File\n");
                 numOptions = 2;

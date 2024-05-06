@@ -50,8 +50,10 @@ typedef struct {
     TypeEnum type;
     // int notNull; //0 or 1 //take user input along with column name, ask for '-nn' right after the name.
     // int primaryKey; //0 or 1 //take user input along with column name, ask for '-p' right after the name.
-    // int foreign key; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
-    // int chained key; //0 or 1; the pointer is shared among multiple tables so that simultaneous updates aren't needed.
+    // int foreignKey; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
+    // int chainedKey; //0 or 1 //the pointer is shared among multiple tables so that simultaneous updates aren't needed.
+    // Value defaultValue; 
+    // int unique; //0 or 1 //If duplicate values are allowed or not.
 } Column;
 
 typedef struct {
