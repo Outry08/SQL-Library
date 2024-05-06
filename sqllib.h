@@ -104,7 +104,7 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
 void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values); //Implemented
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName);
-void deleteRow(Table* table, int rowNum);
+void deleteRow(Table* table, int rowNum); //Implemented
 int getValIndex(Column col, void* value);
 
 /**

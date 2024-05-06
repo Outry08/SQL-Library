@@ -523,6 +523,40 @@ void deleteAll(Table* table) {
     table->numRows = 0;
 }
 
+void deleteRow(Table* table, int rowNum) {
+    if(table->numRows <= 0) {
+        printf("There are no rows to delete.\n");
+        return;
+    }
+    for(int i = 0; i < table->numCols; i++) {
+        for(int j = rowNum; j < table->numRows - 1; j++) {
+            table->cols[i].values[j].isNULL = table->cols[i].values[j + 1].isNULL;
+
+            if(!table->cols[i].values[j].isNULL) {
+                if(table->cols[i].type == INTEGER) {
+                    table->cols[i].values[j].val.INTEGER = table->cols[i].values[j + 1].val.INTEGER;
+                }
+                else if(table->cols[i].type == DECIMAL) {
+                    table->cols[i].values[j].val.DECIMAL = table->cols[i].values[j + 1].val.DECIMAL;
+                }
+                else if(table->cols[i].type == CHAR) {
+                    table->cols[i].values[j].val.CHAR = strdup(table->cols[i].values[j + 1].val.CHAR);
+                }
+            }
+        }
+    }
+
+    table->numRows--;
+
+    for(int i = 0; i < table->numCols; i++) {
+        if(table->cols[i].type == CHAR)
+            if(!table->cols[i].values[table->numRows].isNULL)
+                free(table->cols[i].values[table->numRows].val.CHAR);
+
+        table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
+    }
+}
+
 Table select(Table table, Select sel, int numWheres, Where* wheres, char* conns) {
 
     Table tableCopy = copyTable(table);
@@ -1193,7 +1227,7 @@ void printLoneRow(LoneValue* row, int numValues) {
 
     for(int i = 0; i < numValues; i++) {
         printf(" | ");
-        printf("%s", row[i].colName);
+        printf("\e[1m%s\e[m", row[i].colName);
     }
 
     printf(" | \n\t");
@@ -1220,6 +1254,8 @@ void printLoneRow(LoneValue* row, int numValues) {
 }
 
 void printColumn(Column col, int numValues) {
+
+    printf("\t| \e[1m%s\e[m |\n", col.name);
     for(int i = 0; i < numValues; i++) {
         printf("\t| ");
         if(col.values[i].isNULL) {
@@ -2284,6 +2320,21 @@ Table* userTableOperator(int numTables, Table* tables) {
             case 11:
                 //"11. PASTE"
 
+                if(numTables <= 0) {
+                    printf("There are no tables to choose from.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    if(menuChoices[1] == 1)
+                        printf("Which table would you like to paste a row into?\n");
+                    else if(menuChoices[1] == 2)
+                        printf("Which table would you like to paste a column into?\n");
+                    currTableIndex = tableMenu(numTables, tables);
+                    currentTable = &tables[currTableIndex];
+                    printf("Here is your current table:\n");
+                    printTable(*currentTable);
+                }
+
                 switch(menuChoices[1]) {
                     case 1:
                         // "1. PASTE row in current table"
@@ -2470,6 +2521,13 @@ Table* userTableOperator(int numTables, Table* tables) {
                             else {
                                 printf("The current ordering of datatypes in your copied row does not match the ordering of datatypes in your current table.\nPasting not possible.\n");
                             }
+
+                            if(valueList != NULL) {
+                                for(int i = 0; i < currentTable->numCols; i++)
+                                    free(valueList[i]);
+                                free(valueList);
+                            }
+                            valueList = NULL;
                         }
                         else {
                             printf("You currently do not have a row copied.\n");
@@ -2537,6 +2595,15 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                             insertIntoCol(currentTable, colCopy.name, colCopy.type, numThings, numList, valueList, colString);
 
+                            if(valueList != NULL) {
+                                for(int i = 0; i < numThings; i++)
+                                    free(valueList[i]);
+                                free(valueList);
+                                free(numList);
+                            }
+                            valueList = NULL;
+                            numList = NULL;
+
                         }
                         else {
                             printf("You currently do not have a column copied.\n");
@@ -2547,10 +2614,136 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
             case 12:
                 //"12. DELETE"
-                // "1. DELETE row(s) from current table"
-                // "2. DELETE column(s) from current table"
-                // "3. DELETE value(s) from current table"
-                // "4. DELETE current table"
+
+                if(numTables <= 0) {
+                    printf("There are no tables to choose from.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    if(menuChoices[1] == 1)
+                        printf("Which table would you like to delete rows from?\n");
+                    else if(menuChoices[1] == 2)
+                        printf("Which table would you like to delete columns from?\n");
+                    else if(menuChoices[1] == 3)
+                        printf("Which table would you like to delete values from?\n");
+                    else if(menuChoices[1] == 4)
+                        printf("Which table would you like to delete?\n");
+                    currTableIndex = tableMenu(numTables, tables);
+                    currentTable = &tables[currTableIndex];
+                    printf("Here is your current table:\n");
+                    printTable(*currentTable);
+                }
+
+                switch(menuChoices[1]) {
+                    case 1:
+                        // "1. DELETE row(s) from current table"
+                        if(currentTable->numRows > 0) {
+                            char* input = malloc(sizeof(char) * MAX_LEN);
+                            char* token;
+                            char* temp;
+                            int* rowNums;
+                            char* rowString = malloc(sizeof(char) * MAX_LEN);
+                            int numRowsChosen = 0;
+                            int rowNumI, rowNumF;
+                            printf("How would you like to select the values to be updated?\n");
+                            printf("1. Using column names and a where statement\n");
+                            printf("2. Using the coordinate system (column letters and row numbers)\n");
+                            printf("Choice: ");
+                            do {
+                                scanfWell("%d", &menuChoices[1]);
+                                if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                    printf("Please input either 1 or 2: ");
+                            } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+
+                            if(menuChoices[1] == 1) {
+                                numWheres = whereInput(currentTable, &whereList, &connectiveList);
+
+                                printf("Are you sure you would like to delete these rows? (yes/no): ");
+                                do {
+                                    fgetsUntil(yesno, MAX_LEN);
+                                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                        printf("Please input 'yes' or 'no': ");
+                                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                                if(strcmp(yesno, "yes") == 0)
+                                    delete(currentTable, numWheres, whereList, connectiveList);
+                            }
+                            else if(menuChoices[1] == 2) {
+                                printf("Please input the row number(s) you would like to chooseto delete\n(Eg. '1' | '2-5' | '1, 3, 6'): ");
+                                do {
+                                    rowNumI = 0;
+                                    rowNumF = 1;
+                                    fgetsUntil(input, MAX_LEN);
+                                    token = strtok(input, ", \n");
+                                    while(token != NULL) {
+                                        temp = strstr(token, "-");
+                                        if(temp != NULL) {
+
+                                            strncpy(rowString, token, temp - token);
+                                            // printf("%s %s\n", rowString, ++temp);
+                                            rowString[++temp - token] = '\0';
+                                            rowNumI = atoi(rowString);
+                                            rowNumF = atoi(temp);
+                                            if(rowNumI < 0 || rowNumF > currentTable->numRows || rowNumF <= rowNumI) {
+                                                printf("Invalid input. Please try again: ");
+                                                break;
+                                            }
+                                            if(numRowsChosen == 0)
+                                                rowNums = malloc(sizeof(int) * (rowNumF - rowNumI));
+                                            else
+                                                rowNums = realloc(rowNums, sizeof(int) * (numRowsChosen + rowNumF - rowNumI));
+                                            // printf("%d\n", rowNumF - rowNumI);
+                                            for(int i = rowNumI - 1; i < rowNumF; i++)
+                                                rowNums[numRowsChosen++] = i;
+
+                                        }
+                                        else {
+                                            if(numRowsChosen == 0)
+                                                rowNums = malloc(sizeof(int));
+                                            else
+                                                rowNums = realloc(rowNums, sizeof(int) * (numRowsChosen + 1));
+
+                                            rowNums[numRowsChosen++] = atoi(token) - 1;
+                                        }
+                                        token = strtok(NULL, ", \n");
+                                        // for(int i = 0; i < numRowsChosen; i++)
+                                        //     printf("%d, ", rowNums[i]);
+                                        // printf("\n");
+                                    }
+
+                                } while(rowNumI < 0 || rowNumF > currentTable->numRows || rowNumF <= rowNumI);
+
+
+                                printf("Are you sure you would like to delete these %d rows? (yes/no): ", numRowsChosen);
+                                do {
+                                    fgetsUntil(yesno, MAX_LEN);
+                                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                        printf("Please input 'yes' or 'no': ");
+                                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                                if(strcmp(yesno, "yes") == 0)
+                                    for(int i = 0; i < numRowsChosen; i++)
+                                        deleteRow(currentTable, rowNums[i]);
+                            }
+
+                            free(rowString);
+                            free(input);
+
+                        }
+                        else {
+                            printf("Your current table has no rows in it to delete.\n");
+                        }
+                        break;
+                    case 2:
+                        // "2. DELETE column(s) from current table"
+                        break;
+                    case 3:
+                        // "3. DELETE value(s) from current table"
+                        break;
+                    case 4:
+                        // "4. DELETE current table"
+                        break;
+                }
                 break;
             case 13:
                 //"13. IMPORT"
