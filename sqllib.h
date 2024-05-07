@@ -136,10 +136,13 @@ void printLoneRow(LoneValue* row, int numValues); //Implemented
 void printColumn(Column col, int numValues); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
+
 int* actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
 int typeInput(void); //Implemented
+int colPosInput(int** colNums, int numCols); //Implemented
+int rowNumInput(int** rowNums, int numRows); //Implemented
 void printType(int type); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
@@ -152,6 +155,8 @@ Date stringToDate(char* dateString);
 
 int isAggregate(char* name); //Implemented
 char* getAggregateName(char* name); //Implemented
+
+int verifyDelete(void); //Implemented
 
 void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex); //Implemented
 void checkColumnNames(Table table, char* nameToCheck, int newNameIndex); //Implemented
