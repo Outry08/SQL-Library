@@ -125,8 +125,7 @@ int containsCol(Table table, char* colName); //Implemented
 
 int compare(Column column, int valIndex, char* comparison, void* value); //Implemented
 char* oppComp(char* comparison); //Implemented
-void deleteAll(Table* table); //Implemented
-void freeTable(Table* table);
+void freeTable(Table* table); //Implemented
 
 Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented

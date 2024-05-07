@@ -519,8 +519,18 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
     // printf("POOOF\n");
 }
 
-void deleteAll(Table* table) {
-    table->numRows = 0;
+void freeTable(Table* table) {
+    for(int i = 0; i < table->numCols; i++) {
+        if(table->cols[i].type == CHAR)
+            for(int j = 0; j < table->numRows; j++)
+                if(table->cols[i].values[j].val.CHAR != NULL)
+                    free(table->cols[i].values[j].val.CHAR);
+        free(table->cols[i].values);
+        free(table->cols[i].name);
+    }
+
+    free(table->cols);
+    free(table->name);
 }
 
 void deleteColumn(Table* table, char* colName) {
@@ -534,6 +544,7 @@ void deleteColumn(Table* table, char* colName) {
                 if(!col.values[i].isNULL)
                     free(col.values[i].val.CHAR);
         free(col.values);
+        free(col.name);
         table->numCols--;
         for(int i = colIndex; i < table->numCols; i++)
             table->cols[i] = copyColumn(table->numRows, table->cols[i + 1]);
@@ -1365,7 +1376,7 @@ Table* userTableOperator(int numTables, Table* tables) {
     Table* currentTable = NULL;
 
     int* menuChoices;
-    int currTableIndex;
+    int currTableIndex = -1;;
 
     char yesno[MAX_LEN];
 
@@ -2682,96 +2693,111 @@ Table* userTableOperator(int numTables, Table* tables) {
                         break;
                     case 3:
                         // "3. DELETE value(s) from current table"
+                        if(currentTable->numCols > 0 && currentTable->numRows > 0) {
 
-                        printf("How would you like to select the values to be deleted?\n");
-                        printf("1. Using column names and a where statement\n");
-                        printf("2. Using the coordinate system (column letters and row numbers)\n");
-                        printf("Choice: ");
-                        do {
-                            scanfWell("%d", &menuChoices[1]);
-                            if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                                printf("Please input either 1 or 2: ");
-                        } while(menuChoices[1] < 1 || menuChoices[1] > 2);
-
-                        if(menuChoices[1] == 1) {
-                            int numDelCols = 0;
+                            printf("How would you like to select the values to be deleted?\n");
+                            printf("1. Using column names and a where statement\n");
+                            printf("2. Using the coordinate system (column letters and row numbers)\n");
+                            printf("Choice: ");
                             do {
-                                numDelCols++;
-                                printf("Please input the name of a column you would like to delete the value(s) of: ");
-                                if(numDelCols == 1) {
-                                    nameList = malloc(sizeof(char*) * 1);
-                                    valueList = malloc(sizeof(void*) * 1);
-                                }
-                                else {
-                                    nameList = realloc(nameList, sizeof(char*) * numDelCols);
-                                    valueList = realloc(valueList, sizeof(void*) * numDelCols);
-                                }
+                                scanfWell("%d", &menuChoices[1]);
+                                if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                    printf("Please input either 1 or 2: ");
+                            } while(menuChoices[1] < 1 || menuChoices[1] > 2);
 
-                                nameList[numDelCols - 1] = malloc(sizeof(char) * MAX_LEN);
-
-                                int colIndex;
+                            if(menuChoices[1] == 1) {
+                                int numDelCols = 0;
                                 do {
-                                    fgetsUntil(nameList[numDelCols - 1], MAX_LEN);
-                                    nameToCol(currentTable, nameList[numDelCols - 1], &colIndex);
-                                    if(colIndex == -1)
-                                        printf("Please try again: ");
-                                } while(colIndex == -1);
+                                    numDelCols++;
+                                    printf("Please input the name of a column you would like to delete the value(s) of: ");
+                                    if(numDelCols == 1) {
+                                        nameList = malloc(sizeof(char*) * 1);
+                                        valueList = malloc(sizeof(void*) * 1);
+                                    }
+                                    else {
+                                        nameList = realloc(nameList, sizeof(char*) * numDelCols);
+                                        valueList = realloc(valueList, sizeof(void*) * numDelCols);
+                                    }
 
-                                nameList[numDelCols - 1] = realloc(nameList[numDelCols - 1], sizeof(char) * (strlen(nameList[numDelCols - 1]) + 1));
-                                valueList[numDelCols - 1] = NULL;
+                                    nameList[numDelCols - 1] = malloc(sizeof(char) * MAX_LEN);
 
-                                if(numDelCols + 1 <= currentTable->numCols) {
-
-                                    printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                    int colIndex;
                                     do {
-                                        fgetsUntil(yesno, MAX_LEN);
-                                        if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                            printf("Please input 'yes' or 'no': ");
-                                    } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+                                        fgetsUntil(nameList[numDelCols - 1], MAX_LEN);
+                                        nameToCol(currentTable, nameList[numDelCols - 1], &colIndex);
+                                        if(colIndex == -1)
+                                            printf("Please try again: ");
+                                    } while(colIndex == -1);
+
+                                    nameList[numDelCols - 1] = realloc(nameList[numDelCols - 1], sizeof(char) * (strlen(nameList[numDelCols - 1]) + 1));
+                                    valueList[numDelCols - 1] = NULL;
+
+                                    if(numDelCols + 1 <= currentTable->numCols) {
+
+                                        printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                        do {
+                                            fgetsUntil(yesno, MAX_LEN);
+                                            if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                                printf("Please input 'yes' or 'no': ");
+                                        } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+                                    }
+                                } while(strcmp(yesno, "yes") == 0 && numDelCols + 1 <= currentTable->numCols);
+
+                                numWheres = whereInput(currentTable, &whereList, &connectiveList);
+
+                                update(currentTable, numDelCols, nameList, valueList, numWheres, whereList, connectiveList);
+
+                                for(int i = 0; i < numDelCols; i++) {
+                                    free(nameList[i]);
+                                    free(valueList[i]);
                                 }
-                            } while(strcmp(yesno, "yes") == 0 && numDelCols + 1 <= currentTable->numCols);
-
-                            numWheres = whereInput(currentTable, &whereList, &connectiveList);
-
-                            update(currentTable, numDelCols, nameList, valueList, numWheres, whereList, connectiveList);
-
-                            for(int i = 0; i < numDelCols; i++) {
-                                free(nameList[i]);
-                                free(valueList[i]);
+                                free(nameList);
+                                free(valueList);
+                                nameList = NULL;
+                                valueList = NULL;
                             }
-                            free(nameList);
-                            free(valueList);
-                            nameList = NULL;
-                            valueList = NULL;
-                        }
-                        else {
-                            int* colNums = NULL;
-                            int numColsChosen = 0;
+                            else {
+                                int* colNums = NULL;
+                                int numColsChosen = 0;
 
-                            numColsChosen = colPosInput(&colNums, currentTable->numCols);
+                                numColsChosen = colPosInput(&colNums, currentTable->numCols);
 
-                            int* rowNums = NULL;
-                            int numRowsChosen = 0;
+                                int* rowNums = NULL;
+                                int numRowsChosen = 0;
 
-                            numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
+                                numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
 
-                            for(int i = 0; i < numColsChosen; i++) {
-                                for(int j = 0; j < numRowsChosen; j++) {
-                                    currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 1;
-                                    if(currentTable->cols[colNums[i]].type == CHAR)
-                                        free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
+                                for(int i = 0; i < numColsChosen; i++) {
+                                    for(int j = 0; j < numRowsChosen; j++) {
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 1;
+                                        if(currentTable->cols[colNums[i]].type == CHAR)
+                                            free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
+                                    }
                                 }
+
+                                if(colNums != NULL)
+                                    free(colNums);
+                                if(rowNums != NULL)
+                                    free(rowNums);
+
                             }
-
-                            if(colNums != NULL)
-                                free(colNums);
-                            if(rowNums != NULL)
-                                free(rowNums);
-
                         }
+                        else
+                            printf("Your current table has no values to delete.\n");
                         break;
                     case 4:
                         // "4. DELETE current table"
+                        if(verifyDelete()) {
+
+                            freeTable(currentTable);
+
+                            numTables--;
+                            for(int i = currTableIndex; i < numTables;i++)
+                                tables[i] = tables[i + 1];
+
+                            currTableIndex = -1;
+                            currentTable = NULL;
+                        }
                         break;
                 }
                 break;
