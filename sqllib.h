@@ -6,6 +6,8 @@
 #include <time.h>
 #include <math.h>
 #include <ctype.h>
+#include <limits.h>
+#include <unistd.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) > (b) ? (b) : (a))
 #define MAX_LEN 50
@@ -87,7 +89,7 @@ typedef struct {
 //Primary keys use hashtables in SQL, so could do that here too.
 Table create(char* tableName, int numCols, char** colNames, int* colTypes); //Implemented
 
-Table select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
+Table cql_select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
@@ -103,9 +105,11 @@ void chackDupNames(Table* tableList);
 void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum); //Implemented
 void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values); //Implemented
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
-void deleteColumn(Table* table, char* colName);
+void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
 int getValIndex(Column col, void* value);
+void sortTableByCol(Table* table, char* colName, int ascending);
+
 
 /**
  * C Types to SQL Table Types and Vice Versa
@@ -143,6 +147,9 @@ int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
 void printType(int type); //Implemented
+char* typeToString(int type); //Implemented
+int endsWith(char* str, char* ext); //Implemented
+void checkCharacters(char* string); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
 Table copyTable(Table table); //Implemented
@@ -162,14 +169,13 @@ void checkColumnNames(Table table, char* nameToCheck, int newNameIndex); //Imple
 
 void fgetsUntil(char* string, int size); //Implemented
 void scanfWell(char* formSpec, void* val); //Implemented
-void sleep(int milliseconds); //Implemented
+void cql_sleep(int milliseconds); //Implemented
 void* memdup(void* src, int numBytes);
 
 /**
  * Communication with SQL Language
 **/
-void exportString(Table table);
-void exportSQL(Table table, char* filename);
+void exportTable(Table table, char* fileName, int trunc);
 Table importTable(char* filename);
 Table* userTableOperator(int numTables, Table* tables);
 

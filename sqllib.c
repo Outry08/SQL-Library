@@ -77,12 +77,12 @@ int main(int argc, char const* argv[]) {
     // delete(&tables[0], 2, whereList(2, where5, where3), connectiveList(1, '&'));
     // printTable(tables[0]);
 
-    tables[1] = select(tables[0], select1, 2, whereList(2, where5, where3), connectiveList(1, '|'));
+    tables[1] = cql_select(tables[0], select1, 2, whereList(2, where5, where3), connectiveList(1, '|'));
 
     Select select2 = newSelect(1, nameList(1, "Char Col"), NULL, NULL, 0);
     Where where9 = newWhere("Char Col", "=", "WAHHLUIGI");
 
-    tables[1] = select(tables[0], select2, 2, whereList(2, where3, where9), connectiveList(1, '|'));
+    tables[1] = cql_select(tables[0], select2, 2, whereList(2, where3, where9), connectiveList(1, '|'));
 
     insertIntoRow(tables, 3, nameList(3, "Char Col", "Integer Col", "Decimal Col"), valueList(3, typeList(3, CHAR, INTEGER, DECIMAL), "Princess Peach", 777, 19.64), 3);
 
@@ -591,7 +591,7 @@ void deleteRow(Table* table, int rowNum) {
     }
 }
 
-Table select(Table table, Select sel, int numWheres, Where* wheres, char* conns) {
+Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* conns) {
 
     Table tableCopy = copyTable(table);
 
@@ -1371,6 +1371,301 @@ int letterToInt(char* stringOfLetters) {
     return number;
 }
 
+void sortTableByCol(Table* table, char* colName, int ascending) {
+
+    int colIndex;
+    Column col = nameToCol(table, colName, &colIndex);
+    int type = col.type;
+    int isMixed;
+    ElementUnion dummy;
+    if(ascending) {
+        if(type == INTEGER) {
+            do {
+                isMixed = 0;
+                for(int i = 0; i < table->numRows - 1;i++) {
+                    if(table->cols[colIndex].values[i].isNULL)
+                        table->cols[colIndex].values[i].val.INTEGER = INT_MIN;
+                    if(table->cols[colIndex].values[i + 1].isNULL)
+                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MIN;
+
+                    if(table->cols[colIndex].values[i].val.INTEGER > table->cols[colIndex].values[i + 1].val.INTEGER) {
+                        isMixed = 1;
+                        for(int j = 0; j < table->numCols;j++) {
+                            dummy = table->cols[j].values[i].val;
+                            table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i + 1].val = dummy;
+                        }
+                    }
+                }
+            } while(isMixed);
+        }
+        else if(type == DECIMAL) {
+            for(int i = 0; i < table->numRows;i++) {
+                do {
+                    isMixed = 0;
+                    for(int i = 0; i < table->numRows - 1;i++) {
+                        if(table->cols[colIndex].values[i].isNULL)
+                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MIN__;
+                        if(table->cols[colIndex].values[i + 1].isNULL)
+                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MIN__;
+
+                        if(table->cols[colIndex].values[i].val.DECIMAL > table->cols[colIndex].values[i + 1].val.DECIMAL) {
+                            isMixed = 1;
+                            for(int j = 0; j < table->numCols;j++) {
+                                dummy = table->cols[j].values[i].val;
+                                table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i + 1].val = dummy;
+                            }
+                        }
+                    }
+                } while(isMixed);
+            }
+        }
+        else if(type == CHAR) {
+            for(int i = 0; i < table->numRows;i++) {
+                do {
+                    isMixed = 0;
+                    for(int i = 0; i < table->numRows - 1;i++) {
+                        if(table->cols[colIndex].values[i].isNULL)
+                            table->cols[colIndex].values[i].val.CHAR = "";
+                        if(table->cols[colIndex].values[i + 1].isNULL)
+                            table->cols[colIndex].values[i + 1].val.CHAR = "";
+
+                        if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) > 0) {
+                            isMixed = 1;
+                            for(int j = 0; j < table->numCols;j++) {
+                                dummy = table->cols[j].values[i].val;
+                                table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i + 1].val = dummy;
+                            }
+                        }
+                    }
+                } while(isMixed);
+            }
+        }
+    }
+
+    else {
+        if(type == INTEGER) {
+            do {
+                isMixed = 0;
+                for(int i = 0; i < table->numRows - 1;i++) {
+                    if(table->cols[colIndex].values[i].isNULL)
+                        table->cols[colIndex].values[i].val.INTEGER = INT_MIN;
+                    if(table->cols[colIndex].values[i + 1].isNULL)
+                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MIN;
+
+                    if(table->cols[colIndex].values[i].val.INTEGER < table->cols[colIndex].values[i + 1].val.INTEGER) {
+                        isMixed = 1;
+                        for(int j = 0; j < table->numCols;j++) {
+                            dummy = table->cols[j].values[i].val;
+                            table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i + 1].val = dummy;
+                        }
+                    }
+                }
+            } while(isMixed);
+        }
+        else if(type == DECIMAL) {
+            for(int i = 0; i < table->numRows;i++) {
+                do {
+                    isMixed = 0;
+                    for(int i = 0; i < table->numRows - 1;i++) {
+                        if(table->cols[colIndex].values[i].isNULL)
+                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MIN__;
+                        if(table->cols[colIndex].values[i + 1].isNULL)
+                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MIN__;
+
+                        if(table->cols[colIndex].values[i].val.DECIMAL < table->cols[colIndex].values[i + 1].val.DECIMAL) {
+                            isMixed = 1;
+                            for(int j = 0; j < table->numCols;j++) {
+                                dummy = table->cols[j].values[i].val;
+                                table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i + 1].val = dummy;
+                            }
+                        }
+                    }
+                } while(isMixed);
+            }
+        }
+        else if(type == CHAR) {
+            for(int i = 0; i < table->numRows;i++) {
+                do {
+                    isMixed = 0;
+                    for(int i = 0; i < table->numRows - 1;i++) {
+                        if(table->cols[colIndex].values[i].isNULL)
+                            table->cols[colIndex].values[i].val.CHAR = "";
+                        if(table->cols[colIndex].values[i + 1].isNULL)
+                            table->cols[colIndex].values[i + 1].val.CHAR = "";
+
+                        if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) < 0) {
+                            isMixed = 1;
+                            for(int j = 0; j < table->numCols;j++) {
+                                dummy = table->cols[j].values[i].val;
+                                table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i + 1].val = dummy;
+                            }
+                        }
+                    }
+                } while(isMixed);
+            }
+        }
+    }
+}
+
+// void sortTableByRow(Table* table, int rowNum, int ascending) {
+
+// }
+
+void exportTable(Table table, char* filename, int trunc) {
+
+    char* sql = malloc(sizeof(char) * 1000);
+
+    strcpy(sql, "CREATE TABLE ");
+    char* tableName = strdup(table.name);
+    checkCharacters(tableName);
+
+    strcat(sql, tableName);
+
+    strcat(sql, "(");
+
+    char* colName;
+    for(int i = 0; i < table.numCols; i++) {
+        colName = strdup(table.cols[i].name);
+        checkCharacters(colName);
+        strcat(sql, colName);
+        strcat(sql, " ");
+
+        strcat(sql, typeToString(table.cols[i].type));
+        if(i < table.numCols - 1)
+            strcat(sql, ",\n");
+
+        free(colName);
+    }
+
+    strcat(sql, ");\n");
+
+    for(int i = 0; i < table.numRows; i++) {
+        strcat(sql, "INSERT INTO ");
+        strcat(sql, tableName);
+        strcat(sql, "( ");
+
+        for(int j = 0; j < table.numCols; j++) {
+            colName = strdup(table.cols[j].name);
+            checkCharacters(colName);
+            strcat(sql, colName);
+            if(j < table.numCols - 1)
+                strcat(sql, ", ");
+
+            free(colName);
+        }
+
+        strcat(sql, ")\n");
+
+        strcat(sql, "VALUES (");
+        for(int j = 0; j < table.numCols; j++) {
+            if(table.cols[j].values[i].isNULL) {
+                strcat(sql, "NULL");
+            }
+            else if(table.cols[j].type == INTEGER) {
+                char intString[MAX_LEN];
+                sprintf(intString, "%d", table.cols[j].values[i].val.INTEGER);
+                strcat(sql, intString);
+            }
+            else if(table.cols[j].type == DECIMAL) {
+                char decString[MAX_LEN];
+                sprintf(decString, "%lf", table.cols[j].values[i].val.DECIMAL);
+                strcat(sql, decString);
+            }
+            else if(table.cols[j].type == CHAR) {
+                char chrString[MAX_LEN];
+                sprintf(chrString, "'%s'", table.cols[j].values[i].val.CHAR);
+                strcat(sql, chrString);
+            }
+            if(j < table.numCols - 1)
+                strcat(sql, ", ");
+        }
+
+        strcat(sql, ");\n");
+
+    }
+
+
+
+    if(trunc)
+        truncate(filename, 0);
+
+    // printf("%s\n", sql);
+
+    if(endsWith(filename, ".db")) {
+        sqlite3* db;
+        char** errMessage = malloc(sizeof(char*));
+        *errMessage = strdup("Error: SQL Execution Failed");
+        // char* checkExists = malloc(sizeof(char) * 200);
+
+        /*cursor.execute("""SELECT Name
+                                    FROM SQLITE_MASTER
+                                    WHERE Name = 'BallTable'""")*/
+
+                                    // strcpy(checkExists, "SELECT Name\nFROM SQLITE_MASTER\nWHERE Name = '");
+                                    // strcat(checkExists, tableName);
+                                    // strcat(checkExists, "';");
+                                    // printf("%s", checkExists);
+                                    // char* retVal;
+                                    // sqlite3_exec(db, checkExists, callBackDelTable, retVal, errMessage);
+
+        char* delPrevTable = malloc(sizeof(char) * 100);
+        strcpy(delPrevTable, "DROP TABLE IF EXISTS ");
+        strcat(delPrevTable, tableName);
+
+        sqlite3_open(filename, &db);
+        sqlite3_exec(db, delPrevTable, NULL, NULL, errMessage);
+        sqlite3_exec(db, sql, NULL, NULL, errMessage);
+        sqlite3_close(db);
+
+        free(*errMessage);
+        free(errMessage);
+    }
+    else {
+
+        //Check if data for table creation already exists in file, meaning it needs to be replaced without deleting everything else
+        FILE* fp = fopen(filename, "a");
+        fprintf(fp, "%s", sql);
+        fclose(fp);
+    }
+
+    free(tableName);
+
+    free(sql);
+}
+
+int endsWith(char* str, char* ext) {
+    int stringLength = strlen(str);
+    int extLength = strlen(ext);
+
+    if(stringLength >= extLength)
+        if(!strcmp(str + stringLength - extLength, ext))
+            return 1;
+
+    return 0;
+}
+
+void checkCharacters(char* string) {
+    for(int i = 0; i < strlen(string); i++) {
+        if(!(isalpha(string[i]) || isdigit(string[i]) || string[i] == '_')) {
+            string = realloc(string, strlen(string) + 3);
+
+            strcat(string, "`");
+            for(int j = strlen(string); j > 0; j--) {
+                string[j] = string[j - 1];
+            }
+            string[0] = '`';
+            break;
+        }
+    }
+}
+
+
 Table* userTableOperator(int numTables, Table* tables) {
 
     Table* currentTable = NULL;
@@ -1629,7 +1924,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                 tables = realloc(tables, sizeof(Table) * numTables);
                 currentTable = &(tables[currTableIndex]);
 
-                tables[numTables - 1] = select(*currentTable, sel, numWheres, whereList, connectiveList);
+                tables[numTables - 1] = cql_select(*currentTable, sel, numWheres, whereList, connectiveList);
 
                 currentTable = &tables[numTables - 1];
                 currTableIndex = numTables - 1;
@@ -2207,14 +2502,59 @@ Table* userTableOperator(int numTables, Table* tables) {
 
             case 9:
                 //"9. SORT"
+
+                if(numTables <= 0) {
+                    printf("There are no tables to choose from.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    if(menuChoices[1] == 1)
+                        printf("Which table would you like to paste a row into?\n");
+                    else if(menuChoices[1] == 2)
+                        printf("Which table would you like to paste a column into?\n");
+                    currTableIndex = tableMenu(numTables, tables);
+                    currentTable = &tables[currTableIndex];
+                    printf("Here is your current table:\n");
+                    printTable(*currentTable);
+                }
+
+                // "1. SORT rows by the values of a column"
+                printf("Please input the name of the column you would like to sort by: ");
+
+                int colIndex;
+                do {
+                    fgetsUntil(colName, MAX_LEN);
+                    nameToCol(currentTable, colName, &colIndex);
+                    if(colIndex == -1)
+                        printf("Please try again: ");
+                } while(colIndex == -1);
+
+                char ascdesc[MAX_LEN];
+                int ascending = 1;
+                printf("Would you like the data to be ascending ('asc') or descending ('desc'): ");
+                do {
+                    fgetsUntil(ascdesc, MAX_LEN);
+                    if(strcmp(ascdesc, "asc") != 0 && strcmp(ascdesc, "desc") != 0)
+                        printf("Please input 'asc' or 'desc': ");
+                } while(strcmp(ascdesc, "asc") != 0 && strcmp(ascdesc, "desc") != 0);
+
+                if(strcmp(ascdesc, "desc") == 0)
+                    ascending = 0;
+
+                sortTableByCol(currentTable, colName, ascending);
+
                 break;
 
             case 10:
-                //"10. JOIN"
+                //"10. PIN"
                 break;
 
             case 11:
-                //"11. COPY"
+                //"11. JOIN"
+                break;
+
+            case 12:
+                //"12. COPY"
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
@@ -2289,9 +2629,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 break;
-            case 12:
-                //"12. PASTE"
-
+            case 13:
+                //"13. PASTE"
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
@@ -2578,8 +2917,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 break;
-            case 13:
-                //"13. DELETE"
+            case 14:
+                //"14. DELETE"
 
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
@@ -2801,15 +3140,81 @@ Table* userTableOperator(int numTables, Table* tables) {
                         break;
                 }
                 break;
-            case 14:
-                //"14. IMPORT"
+            case 15:
+                //"15. IMPORT"
                 // "1. IMPORT database from .sql File"
                 // "2. IMPORT database from .db File"
                 break;
-            case 15:
-                //"15. EXPORT"
-                // "1. EXPORT database to .SQL File"
-                // "2. EXPORT database to .db File"
+            case 16:
+                //"16. EXPORT"
+                if(numTables <= 0) {
+                    printf("There are no tables to export.\n");
+                    break;
+                }
+
+                switch(menuChoices[1]) {
+                    case 1: {
+                        // "1. EXPORT current table to file"
+                        if(currentTable == NULL) {
+                            printf("Which table would you like to export?\n");
+                            currTableIndex = tableMenu(numTables, tables);
+                            currentTable = &tables[currTableIndex];
+                            printf("Here is your current table:\n");
+                            printTable(*currentTable);
+                        }
+
+                        char filename[MAX_LEN];
+
+                        printf("Please input the name of the file you want to save '%s' to.\n(can be of any extension, including .db and .sql): ", currentTable->name);
+                        fgetsUntil(filename, MAX_LEN);
+                        int trunc = 0;
+
+                        if(fopen(filename, "r")) {
+
+                            printf("\nWould you like to overwrite the previous contents of this file?\n(Otherwise you will add to the existing data)(yes/no): ");
+                            do {
+                                fgetsUntil(yesno, MAX_LEN);
+                                if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                    printf("Please input 'yes' or 'no': ");
+                            } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                            if(strcmp(yesno, "yes") == 0)
+                                trunc = 1;
+                        }
+
+                        exportTable(*currentTable, filename, trunc);
+
+                        printf("\n'%s' saved successfully to %s.\n", currentTable->name, filename);
+                        break;
+                    }
+                    case  2: {
+                        // "2. EXPORT full database to file"
+                        char filename[MAX_LEN];
+
+                        printf("Please input the name of the file you want to save database to.\n(can be of any extension, including .db and .sql): ");
+                        fgetsUntil(filename, MAX_LEN);
+
+                        if(fopen(filename, "r")) {
+                            printf("\nWould you like to overwrite the previous contents of this file?\n(Otherwise you will add to the existing data)(yes/no): ");
+                            do {
+                                fgetsUntil(yesno, MAX_LEN);
+                                if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                    printf("Please input 'yes' or 'no': ");
+                            } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+
+                            if(strcmp(yesno, "yes") == 0)
+                                truncate(filename, 0);
+                        }
+
+                        for(int i = 0; i < numTables; i++)
+                            exportTable(tables[i], filename, 0);
+
+                        printf("\nDatabase saved successfully to %s.\n", filename);
+                        break;
+                    }
+                }
+
+
                 break;
 
                 /*
@@ -2825,10 +3230,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "1. SAVE & EXIT"
                         printf("Saving\n");
                         for(int i = 0; i < 3; i++) {
-                            sleep(750);
+                            cql_sleep(750);
                             printf(".\n");
                         }
-                        sleep(1000);
+                        cql_sleep(1000);
                         printf("Database Saved.\n");
                         break;
                     case 2:
@@ -2866,19 +3271,20 @@ int* actionMenu(Table* table) {
             "7. UPDATE\n"
             "8. MOVE\n"
             "9. SORT\n"
-            "10. JOIN\n"
-            "11. COPY\n"
-            "12. PASTE\n"
-            "13. DELETE\n"
-            "14. IMPORT\n"
-            "15. EXPORT\n"
+            "10. PIN\n"
+            "11. JOIN\n"
+            "12. COPY\n"
+            "13. PASTE\n"
+            "14. DELETE\n"
+            "15. IMPORT\n"
+            "16. EXPORT\n"
             "0. EXIT\n"
             "Your choice: ");
         do {
             scanfWell("%d", &menuChoices[0]);
-            if(menuChoices[0] < 0 || menuChoices[0] > 15)
-                printf("Please choose between 0 and 15: ");
-        } while(menuChoices[0] < 0 || menuChoices[0] > 15);
+            if(menuChoices[0] < 0 || menuChoices[0] > 16)
+                printf("Please choose between 0 and 16: ");
+        } while(menuChoices[0] < 0 || menuChoices[0] > 16);
 
         switch(menuChoices[0]) {
             case 1:
@@ -2928,12 +3334,16 @@ int* actionMenu(Table* table) {
                 break;
 
             case 9:
-                printf("1. SORT rows by the values of a column\n"
-                    "2. SORT columns by the values of a row\n");
-                numOptions = 2;
+                printf("1. SORT rows by the values of a column\n");
+                numOptions = 1;
                 break;
 
             case 10:
+                printf("1. PIN column in current table\n"
+                    "2. PIN row in current table\n");
+                numOptions = 2;
+
+            case 11:
                 printf("1. CROSS JOIN\n"
                     "2. INNER JOIN\n"
                     "3. OUTER JOIN\n"
@@ -2941,20 +3351,20 @@ int* actionMenu(Table* table) {
                 numOptions = 4;
                 break;
 
-            case 11:
+            case 12:
                 printf("1. COPY row in current table\n"
                     "2. COPY column in current table\n"
                     "3. Make a COPY of current table\n");
                 numOptions = 3;
                 break;
 
-            case 12:
+            case 13:
                 printf("1. PASTE row into current table\n"
                     "2. PASTE column into current table\n");
                 numOptions = 2;
                 break;
 
-            case 13:
+            case 14:
                 printf("1. DELETE row(s) from current table\n"
                     "2. DELETE column(s) from current table\n"
                     "3. DELETE value(s) from current table\n"
@@ -2962,15 +3372,15 @@ int* actionMenu(Table* table) {
                 numOptions = 4;
                 break;
 
-            case 14:
-                printf("1. IMPORT database from .sql File\n"
-                    "2. IMPORT database from .db File\n");
+            case 15:
+                printf("1. IMPORT database from .sql file\n"
+                    "2. IMPORT database from .db file\n");
                 numOptions = 2;
                 break;
 
-            case 15:
-                printf("1. EXPORT database to .SQL File\n"
-                    "2. EXPORT database to .db File\n");
+            case 16:
+                printf("1. EXPORT current table to file\n"
+                    "2. EXPORT full database to file\n");
                 numOptions = 2;
                 break;
 
@@ -3273,6 +3683,17 @@ void printType(int type) {
         printf("UNKOWN TYPE");
 }
 
+char* typeToString(int type) {
+    if(type == CHAR)
+        return "CHAR";
+    else if(type == INTEGER)
+        return "INTEGER";
+    else if(type == DECIMAL)
+        return "DECIMAL";
+    else
+        return "UNKOWN TYPE";
+}
+
 int verifyDelete(void) {
 
     printf("Are you sure you wish do delete this data? (yes/no): ");
@@ -3353,7 +3774,7 @@ void scanfWell(char* formSpec, void* val) {
     } while(!success);
 }
 
-void sleep(int milliseconds) {
+void cql_sleep(int milliseconds) {
     struct timespec ts;
 
     ts.tv_sec = milliseconds / 1000;
