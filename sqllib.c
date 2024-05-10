@@ -100,6 +100,8 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes) {
     Table table;
 
     table.name = strdup(tableName);
+
+    printf("%s\n", table.name);
     if(numCols > 0)
         table.cols = malloc(sizeof(Column) * numCols);
 
@@ -135,7 +137,10 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
     Column currCol;
 
     for(int i = 0; i < table->numCols; i++) {
-        table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
+        if(table->numRows == 1)
+            table->cols[i].values = malloc(sizeof(Value) * table->numRows);
+        else
+            table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
         table->cols[i].values[table->numRows - 1].isNULL = 1;
         // if(table->cols[i].type == CHAR)
         //     table->cols[i].values[table->numRows - 1].CHAR = "NULL";
@@ -1513,9 +1518,130 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
     }
 }
 
-// void sortTableByRow(Table* table, int rowNum, int ascending) {
+Table* importTable(char* tableName, char* filename) {
 
-// }
+    char* properName = strdup(tableName);
+    checkCharacters(properName);
+
+    // printf("%s\n", properName);
+
+    Table* table = NULL;
+
+    if(endsWith(filename, ".db")) {
+        char* sql = malloc(sizeof(char) * 1000);
+        sqlite3* db;
+        char** errMessage = malloc(sizeof(char*));
+        *errMessage = strdup("Error: SQL Execution Failed");
+        // strcpy(sql, "SELECT Name FROM SQLITE_MASTER");
+        strcpy(sql, "SELECT Name FROM SQLITE_MASTER WHERE Name = '");
+        strcat(sql, tableName);
+        strcat(sql, "'");
+
+        // printf("%s\n", sql);
+
+        sqlite3_open(filename, &db);
+        int tableExists = -1;
+        sqlite3_exec(db, sql, callbackCheckExists, &tableExists, errMessage);
+
+        if(tableExists == 1) {
+            strcpy(sql, "SELECT * FROM ");
+            strcat(sql, properName);
+            // printf("%s\n", sql);
+            void** value = malloc(sizeof(void*));
+            //*value goes in as char* and comes out as Table*
+            *value = strdup(tableName);
+            sqlite3_exec(db, sql, callbackCreateTable, value, errMessage);
+
+            table = malloc(sizeof(Table));
+            memcpy(table, (Table*)(*value), sizeof(Table));
+            // table = *((Table*)(*value));
+            sqlite3_exec(db, sql, callbackInsertData, table, errMessage);
+
+            for(int i = 0; i < table->numCols; i++) {
+                int type = -1;
+
+                for(int j = 0; j < table->numRows; j++) {
+                    if(table->cols[i].values[j].isNULL)
+                        continue;
+
+                    int numDots = 0;
+
+                    for(int k = 0; k < strlen(table->cols[i].values[j].val.CHAR); k++) {
+                        printf("%c\n", table->cols[i].values[j].val.CHAR[k]);
+                        if(!isdigit(table->cols[i].values[j].val.CHAR[k]) && table->cols[i].values[j].val.CHAR[k] != '.') {
+                            type = CHAR;
+                            break;
+                        }
+                        else if(table->cols[i].values[j].val.CHAR[k] == '.')
+                            numDots++;
+                    }
+                    if(numDots == 1)
+                        type = DECIMAL;
+                }
+                if(type == CHAR)
+                    continue;
+                else {
+                    if(type == DECIMAL) {
+                        table->cols[i].type = DECIMAL;
+                        for(int j = 0; j < table->numRows; j++) {
+                            if(!table->cols[i].values[j].isNULL) {
+                                double doubVal;
+                                sscanf(table->cols[i].values[j].val.CHAR, "%lf", &doubVal);
+                                free(table->cols[i].values[j].val.CHAR);
+                                table->cols[i].values[j].val.DECIMAL = doubVal;
+                            }
+                        }
+                    }
+                    else {
+                        table->cols[i].type = INTEGER;
+                        for(int j = 0; j < table->numRows; j++) {
+                            if(!table->cols[i].values[j].isNULL) {
+                                int intVal;
+                                sscanf(table->cols[i].values[j].val.CHAR, "%d", &intVal);
+                                free(table->cols[i].values[j].val.CHAR);
+                                table->cols[i].values[j].val.INTEGER = intVal;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else {
+            printf("Error: Table '%s' not found in file '%s'. Import failed.\n", tableName, filename);
+        }
+        sqlite3_close(db);
+
+        free(*errMessage);
+        free(errMessage);
+        free(sql);
+    }
+    else {
+
+        FILE* fp = fopen(filename, "r");
+        if(fp) {
+            char* tableCreateLine = malloc(sizeof(char) * 1000);
+            strcpy(tableCreateLine, "CREATE TABLE ");
+            strcat(tableCreateLine, properName);
+
+            int tableExists = 0;
+
+            char line[100];
+            while(fgets(line, 100, fp)) {
+
+            }
+        }
+        fclose(fp);
+    }
+
+    free(properName);
+
+    return table;
+
+}
+
+Table* importDatabase(char* filename) {
+
+}
 
 void exportTable(Table table, char* filename, int trunc) {
 
@@ -1628,7 +1754,6 @@ void exportTable(Table table, char* filename, int trunc) {
     }
     else {
 
-        //Check if data for table creation already exists in file, meaning it needs to be replaced without deleting everything else
         FILE* fp = fopen(filename, "r");
         if(fp) {
             char* tableCreateLine = malloc(sizeof(char) * 1000);
@@ -1662,6 +1787,38 @@ void exportTable(Table table, char* filename, int trunc) {
     free(tableName);
 
     free(sql);
+}
+
+int callbackCheckExists(void* value, int numCols, char** values, char** columnNames) {
+    *((int*)value) = numCols;
+    return 0;
+}
+
+int callbackPrintData(void* value, int numCols, char** values, char** columnNames) {
+    for(int i = 0; i < numCols; i++) {
+        printf("%s: %s\n", columnNames[i], values[i]);
+    }
+    return 0;
+}
+
+int callbackCreateTable(void* value, int numCols, char** values, char** colNames) {
+    char* tableName = strdup(*(void**)value);
+    printf("1\n");
+    int* colTypes = malloc(sizeof(int) * numCols);
+    for(int i = 0; i < numCols;i++)
+        colTypes[i] = CHAR;
+    Table* table = malloc(sizeof(Table));
+    *table = create(tableName, numCols, colNames, colTypes);
+    *((void**)value) = table;
+    return 1;
+}
+
+int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
+    Table* table = ((Table*)value);
+    printf("%s\n", table->name);
+    printf("YEET\n");
+    insertRow(table, numCols, colNames, (void**)values);
+    return 0;
 }
 
 int endsWith(char* str, char* ext) {
@@ -3165,11 +3322,48 @@ Table* userTableOperator(int numTables, Table* tables) {
                         break;
                 }
                 break;
-            case 15:
+            case 15: {
                 //"15. IMPORT"
-                // "1. IMPORT database from .sql File"
-                // "2. IMPORT database from .db File"
+                switch(menuChoices[1]) {
+                    case 1: {
+                        // "1. IMPORT table from file"
+                        char tableName[MAX_LEN];
+                        char filename[MAX_LEN];
+                        printf("Please input the name of the table you would like to import: ");
+                        fgetsUntil(tableName, MAX_LEN);
+
+                        printf("Please input the name of the file you want to import the table '%s' from.\n(can be of any extension, including .db and .sql): ", tableName);
+                        fgetsUntil(filename, MAX_LEN);
+
+                        if(!fopen(filename, "r")) {
+                            do {
+                                printf("File with name '%s' not found. Please input an existing file's name, or type 'cancel' if you would like to cancel this save: ", filename);
+                                fgetsUntil(filename, MAX_LEN);
+                            } while(strcmp(filename, "cancel") != 0 && !fopen(filename, "r"));
+                        }
+
+                        if(strcmp(filename, "cancel") != 0) {
+                            Table* importedTable = importTable(tableName, filename);
+                            if(importedTable) {
+                                numTables++;
+                                if(numTables == 1)
+                                    tables = malloc(sizeof(Table));
+                                else
+                                    tables = realloc(tables, sizeof(Table) * numTables);
+                                tables[numTables - 1] = *importedTable;
+                                checkTableNames(tables, numTables, tables[numTables - 1].name, numTables - 1);
+                            }
+                        }
+                        break;
+                    }
+                    case 2:
+                        // "2. IMPORT database from file"
+                        break;
+                }
+
+
                 break;
+            }
             case 16:
                 //"16. EXPORT"
                 if(numTables <= 0) {
@@ -3424,8 +3618,8 @@ int* actionMenu(Table* table) {
                 break;
 
             case 15:
-                printf("1. IMPORT database from .sql file\n"
-                    "2. IMPORT database from .db file\n");
+                printf("1. IMPORT table from file\n"
+                    "2. IMPORT database from file\n");
                 numOptions = 2;
                 break;
 

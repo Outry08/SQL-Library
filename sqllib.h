@@ -176,7 +176,11 @@ void* memdup(void* src, int numBytes);
  * Communication with SQL Language
 **/
 void exportTable(Table table, char* fileName, int trunc);
-Table importTable(char* filename);
+Table* importTable(char* tableName, char* filename);
+int callbackCheckExists(void* value, int numCols, char** values, char** columnNames);
+int callbackPrintData(void* value, int numCols, char** values, char** columnNames);
+int callbackCreateTable(void* value, int numCols, char** values, char** colNames);
+int callbackInsertData(void* value, int numCols, char** values, char** colNames);
 Table* userTableOperator(int numTables, Table* tables);
 
 /**
