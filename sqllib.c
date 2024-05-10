@@ -1538,7 +1538,7 @@ void exportTable(Table table, char* filename, int trunc) {
 
         strcat(sql, typeToString(table.cols[i].type));
         if(i < table.numCols - 1)
-            strcat(sql, ",\n");
+            strcat(sql, ", ");
 
         free(colName);
     }
@@ -1590,7 +1590,7 @@ void exportTable(Table table, char* filename, int trunc) {
 
     }
 
-
+    strcat(sql, "\n");
 
     if(trunc)
         truncate(filename, 0);
@@ -1629,7 +1629,32 @@ void exportTable(Table table, char* filename, int trunc) {
     else {
 
         //Check if data for table creation already exists in file, meaning it needs to be replaced without deleting everything else
-        FILE* fp = fopen(filename, "a");
+        FILE* fp = fopen(filename, "r");
+        if(fp) {
+            char* tableCreateLine = malloc(sizeof(char) * 1000);
+            strcpy(tableCreateLine, "CREATE TABLE ");
+            strcat(tableCreateLine, tableName);
+
+            int tableExists = 0;
+
+            char line[100];
+            while(fgets(line, 100, fp)) {
+                if(!tableExists && strstr(line, tableCreateLine)) {
+                    tableExists = 1;
+                    fgets(line, 100, fp);
+                    if(!strstr(line, "INSERT INTO"))
+                        tableExists = 0;
+                }
+                if(tableExists && strstr(line, "CREATE TABLE")) {
+                    tableExists = 0;
+                }
+                if(!tableExists) {
+                    strcat(sql, line);
+                }
+            }
+        }
+        fclose(fp);
+        fp = fopen(filename, "w");
         fprintf(fp, "%s", sql);
         fclose(fp);
     }
@@ -3163,48 +3188,74 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printTable(*currentTable);
                         }
 
+                        int saveChoice;
                         char filename[MAX_LEN];
+                        int trunc;
+                        do {
+                            saveChoice = 1;
+                            trunc = 0;
 
-                        printf("Please input the name of the file you want to save '%s' to.\n(can be of any extension, including .db and .sql): ", currentTable->name);
-                        fgetsUntil(filename, MAX_LEN);
-                        int trunc = 0;
+                            printf("Please input the name of the file you want to save '%s' to.\n(can be of any extension, including .db and .sql): ", currentTable->name);
+                            fgetsUntil(filename, MAX_LEN);
 
-                        if(fopen(filename, "r")) {
+                            if(fopen(filename, "r")) {
 
-                            printf("\nWould you like to overwrite the previous contents of this file?\n(Otherwise you will add to the existing data)(yes/no): ");
-                            do {
-                                fgetsUntil(yesno, MAX_LEN);
-                                if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                    printf("Please input 'yes' or 'no': ");
-                            } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+                                printf("\nHow would you like to save your data?\n");
+                                printf("1. Save current table along with the other contents of the given file.\n"
+                                    "2. Delete all records in the given file and save your current table afterwards.\n"
+                                    "3. Give a new file name.\n"
+                                    "4. Cancel the save.\n"
+                                    "Choice: ");
 
-                            if(strcmp(yesno, "yes") == 0)
-                                trunc = 1;
+                                do {
+                                    scanfWell("%d", &saveChoice);
+                                    if(saveChoice < 1 || saveChoice > 4)
+                                        printf("Please input a number between 1 & 4: ");
+                                } while(saveChoice < 1 || saveChoice > 4);
+
+                                if(saveChoice == 2)
+                                    trunc = 1;
+                            }
+                        } while(saveChoice == 3);
+
+                        if(saveChoice != 4) {
+                            exportTable(*currentTable, filename, trunc);
+                            printf("\n'%s' saved successfully to %s.\n", currentTable->name, filename);
                         }
-
-                        exportTable(*currentTable, filename, trunc);
-
-                        printf("\n'%s' saved successfully to %s.\n", currentTable->name, filename);
                         break;
                     }
                     case  2: {
                         // "2. EXPORT full database to file"
                         char filename[MAX_LEN];
+                        int saveChoice;
+                        do {
+                            saveChoice = 1;
 
-                        printf("Please input the name of the file you want to save database to.\n(can be of any extension, including .db and .sql): ");
-                        fgetsUntil(filename, MAX_LEN);
+                            printf("Please input the name of the file you want to save the database to.\n(can be of any extension, including .db and .sql): ");
+                            fgetsUntil(filename, MAX_LEN);
 
-                        if(fopen(filename, "r")) {
-                            printf("\nWould you like to overwrite the previous contents of this file?\n(Otherwise you will add to the existing data)(yes/no): ");
-                            do {
-                                fgetsUntil(yesno, MAX_LEN);
-                                if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                    printf("Please input 'yes' or 'no': ");
-                            } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+                            if(fopen(filename, "r")) {
 
-                            if(strcmp(yesno, "yes") == 0)
-                                truncate(filename, 0);
-                        }
+                                printf("\nHow would you like to save your data?\n");
+                                printf("1. Save database along with the other contents of the given file.\n"
+                                    "2. Delete all records in the given file and save your database afterwards.\n"
+                                    "3. Give a new file name.\n"
+                                    "4. Cancel the save.\n"
+                                    "Choice: ");
+
+                                do {
+                                    scanfWell("%d", &saveChoice);
+                                    if(saveChoice < 1 || saveChoice > 4)
+                                        printf("Please input a number between 1 & 4: ");
+                                } while(saveChoice < 1 || saveChoice > 4);
+
+                                if(saveChoice == 2)
+                                    truncate(filename, 0);
+
+                            }
+
+                        } while(saveChoice == 3);
+
 
                         for(int i = 0; i < numTables; i++)
                             exportTable(tables[i], filename, 0);

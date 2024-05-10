@@ -16,7 +16,7 @@ Execute the program with ./sql
 ## Roadmap
 Complete user-input table manipulator.
 Add 'back' or 'cancel' option to nearly every stage of user input.
-Add menu item to sort by a column or a row.
+Add menu item to sort by a column (or by multiple columns).
 Add DATE datatype functionality.
 Include aggregate functions, distinct, order by, and group by into select function.
 Add the ability to input '*' to indicate 'all' in many user input places.
