@@ -177,10 +177,12 @@ void* memdup(void* src, int numBytes);
 **/
 void exportTable(Table table, char* fileName, int trunc);
 Table* importTable(char* tableName, char* filename);
+int importDatabase(char* filename, Table** tables);
 int callbackCheckExists(void* value, int numCols, char** values, char** columnNames);
 int callbackPrintData(void* value, int numCols, char** values, char** columnNames);
 int callbackCreateTable(void* value, int numCols, char** values, char** colNames);
 int callbackInsertData(void* value, int numCols, char** values, char** colNames);
+int callbackGetTableNames(void* value, int numCols, char** values, char** colNames);
 Table* userTableOperator(int numTables, Table* tables);
 
 /**

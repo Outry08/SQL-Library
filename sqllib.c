@@ -1567,7 +1567,7 @@ Table* importTable(char* tableName, char* filename) {
                     int numDots = 0;
 
                     for(int k = 0; k < strlen(table->cols[i].values[j].val.CHAR); k++) {
-                        printf("%c\n", table->cols[i].values[j].val.CHAR[k]);
+                        // printf("%c\n", table->cols[i].values[j].val.CHAR[k]);
                         if(!isdigit(table->cols[i].values[j].val.CHAR[k]) && table->cols[i].values[j].val.CHAR[k] != '.') {
                             type = CHAR;
                             break;
@@ -1577,8 +1577,10 @@ Table* importTable(char* tableName, char* filename) {
                     }
                     if(numDots == 1)
                         type = DECIMAL;
+                    else if(type == -1)
+                        type = INTEGER;
                 }
-                if(type == CHAR)
+                if(type == CHAR || type == -1)
                     continue;
                 else {
                     if(type == DECIMAL) {
@@ -1639,8 +1641,80 @@ Table* importTable(char* tableName, char* filename) {
 
 }
 
-Table* importDatabase(char* filename) {
+int importDatabase(char* filename, Table** tables) {
 
+    int numTables = 0;
+
+    if(endsWith(filename, ".db")) {
+        // printf("1\n");
+
+        char* sql = malloc(sizeof(char) * 1000);
+        sqlite3* db;
+        char** errMessage = malloc(sizeof(char*));
+        *errMessage = strdup("Error: SQL Execution Failed");
+
+        strcpy(sql, "SELECT Name FROM SQLITE_MASTER");
+
+        sqlite3_open(filename, &db);
+
+        // printf("2\n");
+
+        struct TableNames {
+            char** names;
+            int numNames;
+        };
+
+        struct TableNames* names = malloc(sizeof(struct TableNames));
+        sqlite3_exec(db, sql, callbackGetTableNames, names, errMessage);
+        sqlite3_close(db);
+
+        numTables = names->numNames;
+
+        // for(int i = 0; i < names->numNames;i++) {
+        //     printf("%s\n", names->names[i]);
+        // }
+
+        if(numTables >= 1) {
+
+            if(tables == NULL)
+                tables = malloc(sizeof(Table*));
+
+            for(int i = 0; i < numTables; i++) {
+                if(i == 0)
+                    *tables = malloc(sizeof(Table));
+                else
+                    *tables = realloc(*tables, sizeof(Table) * (i + 1));
+
+                (*tables)[i] = *importTable(names->names[i], filename);
+            }
+        }
+        else {
+            printf("Error: No tables found in file '%s'. Import failed.\n", filename);
+        }
+
+        free(*errMessage);
+        free(errMessage);
+        free(sql);
+    }
+    else {
+
+        // FILE* fp = fopen(filename, "r");
+        // if(fp) {
+        //     char* tableCreateLine = malloc(sizeof(char) * 1000);
+        //     strcpy(tableCreateLine, "CREATE TABLE ");
+        //     strcat(tableCreateLine, properName);
+
+        //     int tableExists = 0;
+
+        //     char line[100];
+        //     while(fgets(line, 100, fp)) {
+
+        //     }
+        // }
+        // fclose(fp);
+    }
+
+    return numTables;
 }
 
 void exportTable(Table table, char* filename, int trunc) {
@@ -1803,7 +1877,7 @@ int callbackPrintData(void* value, int numCols, char** values, char** columnName
 
 int callbackCreateTable(void* value, int numCols, char** values, char** colNames) {
     char* tableName = strdup(*(void**)value);
-    printf("1\n");
+    // printf("1\n");
     int* colTypes = malloc(sizeof(int) * numCols);
     for(int i = 0; i < numCols;i++)
         colTypes[i] = CHAR;
@@ -1815,9 +1889,28 @@ int callbackCreateTable(void* value, int numCols, char** values, char** colNames
 
 int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
-    printf("%s\n", table->name);
-    printf("YEET\n");
+    // printf("%s\n", table->name);
+    // printf("YEET\n");
     insertRow(table, numCols, colNames, (void**)values);
+    return 0;
+}
+
+int callbackGetTableNames(void* value, int numCols, char** values, char** colNames) {
+    struct TableNames {
+        char** names;
+        int numNames;
+    };
+    if(++(((struct TableNames*)value)->numNames) == 1)
+        ((struct TableNames*)value)->names = malloc(sizeof(char*));
+    else
+        ((struct TableNames*)value)->names = realloc(((struct TableNames*)value)->names, sizeof(char*) * ((struct TableNames*)value)->numNames);
+
+    ((struct TableNames*)value)->names[((struct TableNames*)value)->numNames - 1] = strdup(values[0]);
+
+    // for(int i = 0; i < ((struct TableNames*)value)->numNames; i++) {
+    //     printf("%s ", ((struct TableNames*)value)->names[i]);
+    // }
+
     return 0;
 }
 
@@ -1995,25 +2088,39 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
             case 4:
                 //"4. RENAME"
+                if(numTables <= 0) {
+                    printf("There are no tables to choose from for renaming.\n");
+                    break;
+                }
+                if(currentTable == NULL) {
+                    printf("Which table would you like to choose from for renaming?\n");
+                    currTableIndex = tableMenu(numTables, tables);
+                    currentTable = &tables[currTableIndex];
+                    printf("Here is your current table:\n");
+                    printTable(*currentTable);
+                }
+
                 switch(menuChoices[1]) {
                     case 1:
                         // "1. RENAME column in current table"
-                        printf("Name of column you wish to rename: ");
+                        if(currentTable->numCols == 0) {
+                            printf("Name of column you wish to rename: ");
 
-                        Column column;
-                        int colIndex;
+                            Column column;
+                            int colIndex;
 
-                        do {
-                            fgetsUntil(colName, MAX_LEN);
-                            column = nameToCol(currentTable, colName, &colIndex);
-                            if(column.type == -1)
-                                printf("That column does not exist. Please try again: ");
-                        } while(column.type == -1);
+                            do {
+                                fgetsUntil(colName, MAX_LEN);
+                                column = nameToCol(currentTable, colName, &colIndex);
+                                if(column.type == -1)
+                                    printf("That column does not exist. Please try again: ");
+                            } while(column.type == -1);
 
-                        printf("New name for column '%s': ", colName);
-                        fgetsUntil(column.name, MAX_LEN);
-                        checkColumnNames(*currentTable, column.name, colIndex);
-                        break;
+                            printf("New name for column '%s': ", colName);
+                            fgetsUntil(column.name, MAX_LEN);
+                            checkColumnNames(*currentTable, column.name, colIndex);
+                            break;
+                        }
 
                     case 2:
                         // "2. RENAME current table"
@@ -2371,150 +2478,157 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
             case 7:
                 //"7. UPDATE"
-                // "1. UPDATE a existing values in current table"
-                if(numTables <= 0) {
-                    printf("There are no tables to select from.\n");
-                    break;
-                }
-                if(currentTable == NULL) {
-                    printf("Which table would you like to select from?\n");
-                    currTableIndex = tableMenu(numTables, tables);
-                    currentTable = &tables[currTableIndex];
-                    printf("Here is your current table:\n");
-                    printTable(*currentTable);
-                }
+                switch(menuChoices[1]) {
+                    case 1:
+                        // "1. UPDATE a existing values in current table"
+                        if(numTables <= 0) {
+                            printf("There are no tables to select from.\n");
+                            break;
+                        }
+                        if(currentTable == NULL) {
+                            printf("Which table would you like to select from?\n");
+                            currTableIndex = tableMenu(numTables, tables);
+                            currentTable = &tables[currTableIndex];
+                            printf("Here is your current table:\n");
+                            printTable(*currentTable);
+                        }
 
-                printf("How would you like to select the values to be updated?\n");
-                printf("1. Using column names and a where statement\n");
-                printf("2. Using the coordinate system (column letters and row numbers)\n");
-                printf("Choice: ");
-                do {
-                    scanfWell("%d", &menuChoices[1]);
-                    if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                        printf("Please input either 1 or 2: ");
-                } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                        printf("How would you like to select the values to be updated?\n");
+                        printf("1. Using column names and a where statement\n");
+                        printf("2. Using the coordinate system (column letters and row numbers)\n");
+                        printf("Choice: ");
+                        do {
+                            scanfWell("%d", &menuChoices[1]);
+                            if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                printf("Please input either 1 or 2: ");
+                        } while(menuChoices[1] < 1 || menuChoices[1] > 2);
 
-                if(menuChoices[1] == 1) {
-                    int numUpdCols = 0;
-                    do {
-                        numUpdCols++;
-                        printf("Please input the name of a column you would like to update the value(s) of: ");
-                        if(numUpdCols == 1) {
-                            nameList = malloc(sizeof(char*) * 1);
-                            valueList = malloc(sizeof(void*) * 1);
+                        if(menuChoices[1] == 1) {
+                            int numUpdCols = 0;
+                            do {
+                                numUpdCols++;
+                                printf("Please input the name of a column you would like to update the value(s) of: ");
+                                if(numUpdCols == 1) {
+                                    nameList = malloc(sizeof(char*) * 1);
+                                    valueList = malloc(sizeof(void*) * 1);
+                                }
+                                else {
+                                    nameList = realloc(nameList, sizeof(char*) * numUpdCols);
+                                    valueList = realloc(valueList, sizeof(void*) * numUpdCols);
+                                }
+
+                                nameList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
+
+                                int colIndex;
+                                do {
+                                    fgetsUntil(nameList[numUpdCols - 1], MAX_LEN);
+                                    nameToCol(currentTable, nameList[numUpdCols - 1], &colIndex);
+                                    if(colIndex == -1)
+                                        printf("Please try again: ");
+                                } while(colIndex == -1);
+                                nameList[numUpdCols - 1] = realloc(nameList[numUpdCols - 1], sizeof(char) * (strlen(nameList[numUpdCols - 1]) + 1));
+
+                                printf("Please input the value you wish to replace your desired cells in the column '%s': ", nameList[numUpdCols - 1]);
+                                int colType = nameToCol(currentTable, nameList[numUpdCols - 1], NULL).type;
+                                if(colType == INTEGER) {
+                                    valueList[numUpdCols - 1] = malloc(sizeof(int));
+                                    scanfWell("%d", valueList[numUpdCols - 1]);
+                                }
+                                else if(colType == CHAR) {
+                                    valueList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
+                                    fgetsUntil(valueList[numUpdCols - 1], MAX_LEN);
+                                    valueList[numUpdCols - 1] = realloc(valueList[numUpdCols - 1], sizeof(char) * (strlen(valueList[numUpdCols - 1]) + 1));
+                                }
+                                else if(colType == DECIMAL) {
+                                    valueList[numUpdCols - 1] = malloc(sizeof(double));
+                                    scanfWell("%lf", valueList[numUpdCols - 1]);
+                                }
+
+                                if(numUpdCols + 1 <= currentTable->numCols) {
+                                    printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                    do {
+                                        fgetsUntil(yesno, MAX_LEN);
+                                        if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
+                                            printf("Please input 'yes' or 'no': ");
+                                    } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
+                                }
+
+                            } while(strcmp(yesno, "yes") == 0 && numUpdCols + 1 <= currentTable->numCols);
+
+                            numWheres = whereInput(currentTable, &whereList, &connectiveList);
+
+                            update(currentTable, numUpdCols, nameList, valueList, numWheres, whereList, connectiveList);
+
+                            for(int i = 0; i < numUpdCols; i++) {
+                                free(nameList[i]);
+                                free(valueList[i]);
+                            }
+                            free(nameList);
+                            free(valueList);
+                            nameList = NULL;
+                            valueList = NULL;
                         }
                         else {
-                            nameList = realloc(nameList, sizeof(char*) * numUpdCols);
-                            valueList = realloc(valueList, sizeof(void*) * numUpdCols);
-                        }
+                            int* colNums = NULL;
+                            int numColsChosen = 0;
 
-                        nameList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
+                            numColsChosen = colPosInput(&colNums, currentTable->numCols);
 
-                        int colIndex;
-                        do {
-                            fgetsUntil(nameList[numUpdCols - 1], MAX_LEN);
-                            nameToCol(currentTable, nameList[numUpdCols - 1], &colIndex);
-                            if(colIndex == -1)
-                                printf("Please try again: ");
-                        } while(colIndex == -1);
-                        nameList[numUpdCols - 1] = realloc(nameList[numUpdCols - 1], sizeof(char) * (strlen(nameList[numUpdCols - 1]) + 1));
+                            int* rowNums = NULL;
+                            int numRowsChosen = 0;
 
-                        printf("Please input the value you wish to replace your desired cells in the column '%s': ", nameList[numUpdCols - 1]);
-                        int colType = nameToCol(currentTable, nameList[numUpdCols - 1], NULL).type;
-                        if(colType == INTEGER) {
-                            valueList[numUpdCols - 1] = malloc(sizeof(int));
-                            scanfWell("%d", valueList[numUpdCols - 1]);
-                        }
-                        else if(colType == CHAR) {
-                            valueList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
-                            fgetsUntil(valueList[numUpdCols - 1], MAX_LEN);
-                            valueList[numUpdCols - 1] = realloc(valueList[numUpdCols - 1], sizeof(char) * (strlen(valueList[numUpdCols - 1]) + 1));
-                        }
-                        else if(colType == DECIMAL) {
-                            valueList[numUpdCols - 1] = malloc(sizeof(double));
-                            scanfWell("%lf", valueList[numUpdCols - 1]);
-                        }
+                            numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
 
-                        if(numUpdCols + 1 <= currentTable->numCols) {
-                            printf("Would you like to add another column to have its values updated? (yes/no): ");
-                            do {
-                                fgetsUntil(yesno, MAX_LEN);
-                                if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                    printf("Please input 'yes' or 'no': ");
-                            } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
-                        }
-
-                    } while(strcmp(yesno, "yes") == 0 && numUpdCols + 1 <= currentTable->numCols);
-
-                    numWheres = whereInput(currentTable, &whereList, &connectiveList);
-
-                    update(currentTable, numUpdCols, nameList, valueList, numWheres, whereList, connectiveList);
-
-                    for(int i = 0; i < numUpdCols; i++) {
-                        free(nameList[i]);
-                        free(valueList[i]);
-                    }
-                    free(nameList);
-                    free(valueList);
-                    nameList = NULL;
-                    valueList = NULL;
-                }
-                else {
-                    int* colNums = NULL;
-                    int numColsChosen = 0;
-
-                    numColsChosen = colPosInput(&colNums, currentTable->numCols);
-
-                    int* rowNums = NULL;
-                    int numRowsChosen = 0;
-
-                    numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
-
-                    int* intVal = NULL;
-                    double* decVal = NULL;
-                    char* charVal = NULL;
-                    for(int i = 0; i < numColsChosen; i++) {
-                        if(currentTable->cols[colNums[i]].type == INTEGER) {
-                            if(intVal == NULL) {
-                                intVal = malloc(sizeof(int));
-                                printf("Please input your new value for columns of type INTEGER: ");
-                                scanfWell("%d", intVal);
+                            int* intVal = NULL;
+                            double* decVal = NULL;
+                            char* charVal = NULL;
+                            for(int i = 0; i < numColsChosen; i++) {
+                                if(currentTable->cols[colNums[i]].type == INTEGER) {
+                                    if(intVal == NULL) {
+                                        intVal = malloc(sizeof(int));
+                                        printf("Please input your new value for columns of type INTEGER: ");
+                                        scanfWell("%d", intVal);
+                                    }
+                                    for(int j = 0; j < numRowsChosen; j++) {
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.INTEGER = *intVal;
+                                    }
+                                }
+                                else if(currentTable->cols[colNums[i]].type == CHAR) {
+                                    if(charVal == NULL) {
+                                        charVal = malloc(sizeof(char) * MAX_LEN);
+                                        printf("Please input your new value for columns of type CHAR: ");
+                                        fgetsUntil(charVal, MAX_LEN);
+                                    }
+                                    for(int j = 0; j < numRowsChosen; j++) {
+                                        free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR = strdup(charVal);
+                                    }
+                                }
+                                else if(currentTable->cols[colNums[i]].type == DECIMAL) {
+                                    if(decVal == NULL) {
+                                        decVal = malloc(sizeof(double));
+                                        printf("Please input your new value for columns of type DECIMAL: ");
+                                        scanfWell("%lf", decVal);
+                                    }
+                                    for(int j = 0; j < numRowsChosen; j++) {
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.DECIMAL = *decVal;
+                                    }
+                                }
                             }
-                            for(int j = 0; j < numRowsChosen; j++) {
-                                currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                currentTable->cols[colNums[i]].values[rowNums[j]].val.INTEGER = *intVal;
-                            }
-                        }
-                        else if(currentTable->cols[colNums[i]].type == CHAR) {
-                            if(charVal == NULL) {
-                                charVal = malloc(sizeof(char) * MAX_LEN);
-                                printf("Please input your new value for columns of type CHAR: ");
-                                fgetsUntil(charVal, MAX_LEN);
-                            }
-                            for(int j = 0; j < numRowsChosen; j++) {
-                                free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
-                                currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR = strdup(charVal);
-                            }
-                        }
-                        else if(currentTable->cols[colNums[i]].type == DECIMAL) {
-                            if(decVal == NULL) {
-                                decVal = malloc(sizeof(double));
-                                printf("Please input your new value for columns of type DECIMAL: ");
-                                scanfWell("%lf", decVal);
-                            }
-                            for(int j = 0; j < numRowsChosen; j++) {
-                                currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                currentTable->cols[colNums[i]].values[rowNums[j]].val.DECIMAL = *decVal;
-                            }
-                        }
-                    }
 
-                    if(colNums != NULL)
-                        free(colNums);
-                    if(rowNums != NULL)
-                        free(rowNums);
+                            if(colNums != NULL)
+                                free(colNums);
+                            if(rowNums != NULL)
+                                free(rowNums);
 
+                        }
+                        break;
+                    case 2:
+                        //"2. UPDATE attributes of column in current table"
+                        break;
                 }
 
                 break;
@@ -3115,10 +3229,12 @@ Table* userTableOperator(int numTables, Table* tables) {
                         printf("Which table would you like to delete values from?\n");
                     else if(menuChoices[1] == 4)
                         printf("Which table would you like to delete?\n");
-                    currTableIndex = tableMenu(numTables, tables);
-                    currentTable = &tables[currTableIndex];
-                    printf("Here is your current table:\n");
-                    printTable(*currentTable);
+                    if(menuChoices[1] != 5) {
+                        currTableIndex = tableMenu(numTables, tables);
+                        currentTable = &tables[currTableIndex];
+                        printf("Here is your current table:\n");
+                        printTable(*currentTable);
+                    }
                 }
 
                 switch(menuChoices[1]) {
@@ -3320,6 +3436,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             currentTable = NULL;
                         }
                         break;
+                    case 5:
+                        // "5. DELETE database"
+                        if(verifyDelete()) {
+                            for(int i = 0; i < numTables; i++)
+                                freeTable(&tables[i]);
+
+                            free(tables);
+
+                            numTables = 0;
+                        }
+                        break;
                 }
                 break;
             case 15: {
@@ -3356,9 +3483,38 @@ Table* userTableOperator(int numTables, Table* tables) {
                         }
                         break;
                     }
-                    case 2:
+                    case 2: {
                         // "2. IMPORT database from file"
+                        char filename[MAX_LEN];
+                        printf("Please input the name of the file you want to import the database from.\n(can be of any extension, including .db and .sql): ");
+                        fgetsUntil(filename, MAX_LEN);
+
+                        if(!fopen(filename, "r")) {
+                            do {
+                                printf("File with name '%s' not found. Please input an existing file's name, or type 'cancel' if you would like to cancel this save: ", filename);
+                                fgetsUntil(filename, MAX_LEN);
+                            } while(strcmp(filename, "cancel") != 0 && !fopen(filename, "r"));
+                        }
+
+                        if(strcmp(filename, "cancel") != 0) {
+                            printf("Are you sure you want to overwrite the current database? (yes/no): ");
+                            do {
+                                fgetsUntil(yesno, MAX_LEN);
+                                if(strcmp(yesno, "yes") != 0 && strcmp(yesno, "no") != 0)
+                                    printf("Please input 'yes' or 'no': ");
+                            } while(strcmp(yesno, "yes") != 0 && strcmp(yesno, "no") != 0);
+
+                            if(strcmp(yesno, "yes") == 0) {
+                                for(int i = 0; i < numTables; i++)
+                                    freeTable(&tables[i]);
+
+                                free(tables);
+
+                                numTables = importDatabase(filename, &tables);
+                            }
+                        }
                         break;
+                    }
                 }
 
 
@@ -3568,8 +3724,9 @@ int* actionMenu(Table* table) {
                 break;
 
             case 7:
-                printf("1. UPDATE existing values in current table\n");
-                numOptions = 1;
+                printf("1. UPDATE existing values in current table\n"
+                    "2. UPDATE attributes of column in current table\n");
+                numOptions = 2;
                 break;
 
             case 8:
@@ -3613,8 +3770,9 @@ int* actionMenu(Table* table) {
                 printf("1. DELETE row(s) from current table\n"
                     "2. DELETE column(s) from current table\n"
                     "3. DELETE value(s) from current table\n"
-                    "4. DELETE current table\n");
-                numOptions = 4;
+                    "4. DELETE current table\n"
+                    "5. DELETE database\n");
+                numOptions = 5;
                 break;
 
             case 15:
