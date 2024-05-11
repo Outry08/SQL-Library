@@ -3505,7 +3505,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                             } while(strcmp(yesno, "yes") != 0 && strcmp(yesno, "no") != 0);
 
                             if(strcmp(yesno, "yes") == 0) {
-                                int numTablesLoaded = importDatabase(filename, &tables);
+                                Table* newTables;
+                                int numTablesLoaded = importDatabase(filename, &newTables);
 
                                 if(numTablesLoaded > 0) {
                                     for(int i = 0; i < numTables; i++)
@@ -3513,6 +3514,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                     free(tables);
                                     numTables = numTablesLoaded;
+                                    tables = newTables;
                                 }
                             }
                         }
