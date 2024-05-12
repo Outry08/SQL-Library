@@ -14,9 +14,9 @@ Execute the program with ./sql
 ## Visuals
 
 ## Roadmap
-- Add .cql file for each table saved to save attributes such as column types, not null, autoincrement, primary key, and foreign key. Or alternatively learn how to retrieve this information from the sql document.
 - Add BOOL datatype funcitonality.
 - Add DATE datatype functionality.
+- Look into BLOB datatype support.
 - Include aggregate functions, distinct, order by, and group by into select function.
 - Incorporate column properties such as autoincrement, not null, primary key, and foreign key.
 - Add the ability to input '*' to indicate 'all' in many user input places.

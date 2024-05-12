@@ -20,7 +20,6 @@ int main(int argc, char const* argv[]) {
     Where where1 = newWhere("Char Col", "==", "Luigi");
     double newNum = 9999.999;
 
-
     update(&tables[0], 1, (nameList(1, "Decimal Col")), valueList(1, typeList(1, DECIMAL), 9999.999), 1, whereList(1, where1), connectiveList(0));
     printTable(tables[0]);
 
@@ -1520,10 +1519,7 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
 
 Table* importTable(char* tableName, char* filename) {
 
-    char* properName = strdup(tableName);
-    checkCharacters(properName);
-
-    // printf("%s\n", properName);
+    char* properName = addQuotesToString(tableName);
 
     Table* table = NULL;
 
@@ -1554,59 +1550,70 @@ Table* importTable(char* tableName, char* filename) {
 
             table = malloc(sizeof(Table));
             memcpy(table, (Table*)(*value), sizeof(Table));
-            // table = *((Table*)(*value));
+
+            printTable(*table);
+
+            strcpy(sql, "SELECT sql FROM SQLITE_MASTER WHERE Name = ");
+            strcat(sql, "'My Table'");
+            sqlite3_exec(db, sql, callbackGetAttributes, table, errMessage);
+
+            strcpy(sql, "SELECT * FROM ");
+            strcat(sql, properName);
             sqlite3_exec(db, sql, callbackInsertData, table, errMessage);
 
-            for(int i = 0; i < table->numCols; i++) {
-                int type = -1;
 
-                for(int j = 0; j < table->numRows; j++) {
-                    if(table->cols[i].values[j].isNULL)
-                        continue;
+            // for(int i = 0; i < table->numCols; i++) {
+            //     int type = table->cols[i].type;
 
-                    int numDots = 0;
+                // for(int j = 0; j < table->numRows; j++) {
+                //     if(table->cols[i].values[j].isNULL)
+                //         continue;
 
-                    for(int k = 0; k < strlen(table->cols[i].values[j].val.CHAR); k++) {
-                        // printf("%c\n", table->cols[i].values[j].val.CHAR[k]);
-                        if(!isdigit(table->cols[i].values[j].val.CHAR[k]) && table->cols[i].values[j].val.CHAR[k] != '.') {
-                            type = CHAR;
-                            break;
-                        }
-                        else if(table->cols[i].values[j].val.CHAR[k] == '.')
-                            numDots++;
-                    }
-                    if(numDots == 1)
-                        type = DECIMAL;
-                    else if(type == -1)
-                        type = INTEGER;
-                }
-                if(type == CHAR || type == -1)
-                    continue;
-                else {
-                    if(type == DECIMAL) {
-                        table->cols[i].type = DECIMAL;
-                        for(int j = 0; j < table->numRows; j++) {
-                            if(!table->cols[i].values[j].isNULL) {
-                                double doubVal;
-                                sscanf(table->cols[i].values[j].val.CHAR, "%lf", &doubVal);
-                                free(table->cols[i].values[j].val.CHAR);
-                                table->cols[i].values[j].val.DECIMAL = doubVal;
-                            }
-                        }
-                    }
-                    else {
-                        table->cols[i].type = INTEGER;
-                        for(int j = 0; j < table->numRows; j++) {
-                            if(!table->cols[i].values[j].isNULL) {
-                                int intVal;
-                                sscanf(table->cols[i].values[j].val.CHAR, "%d", &intVal);
-                                free(table->cols[i].values[j].val.CHAR);
-                                table->cols[i].values[j].val.INTEGER = intVal;
-                            }
-                        }
-                    }
-                }
-            }
+                //     int numDots = 0;
+
+                //     for(int k = 0; k < strlen(table->cols[i].values[j].val.CHAR); k++) {
+                //         // printf("%c\n", table->cols[i].values[j].val.CHAR[k]);
+                //         if(!isdigit(table->cols[i].values[j].val.CHAR[k]) && table->cols[i].values[j].val.CHAR[k] != '.') {
+                //             type = CHAR;
+                //             break;
+                //         }
+                //         else if(table->cols[i].values[j].val.CHAR[k] == '.')
+                //             numDots++;
+                //     }
+                //     if(numDots == 1)
+                //         type = DECIMAL;
+                //     else if(type == -1)
+                //         type = INTEGER;
+                // }
+            //     if(type == CHAR)
+            //         continue;
+            //     else {
+            //         if(type == DECIMAL) {
+            //             printf("DECIMAL\n");
+            //             for(int j = 0; j < table->numRows; j++) {
+            //                 if(!table->cols[i].values[j].isNULL) {
+            //                     double doubVal;
+            //                     printf("%s\n", table->cols[i].values[j].val.CHAR);
+            //                     sscanf(table->cols[i].values[j].val.CHAR, "%lf", &doubVal);
+            //                     free(table->cols[i].values[j].val.CHAR);
+            //                     table->cols[i].values[j].val.DECIMAL = doubVal;
+            //                 }
+            //             }
+            //         }
+            //         else {
+            //             printf("INTEGER\n");
+            //             for(int j = 0; j < table->numRows; j++) {
+            //                 if(!table->cols[i].values[j].isNULL) {
+            //                     int intVal;
+            //                     printf("%s\n", table->cols[i].values[j].val.CHAR);
+            //                     sscanf(table->cols[i].values[j].val.CHAR, "%d", &intVal);
+            //                     free(table->cols[i].values[j].val.CHAR);
+            //                     table->cols[i].values[j].val.INTEGER = intVal;
+            //                 }
+            //             }
+            //         }
+            //     }
+            // }
         }
         else {
             printf("Error: Table '%s' not found in file '%s'. Import failed.\n", tableName, filename);
@@ -1826,7 +1833,9 @@ int importDatabase(char* filename, Table** tables) {
         };
 
         struct TableNames* names = malloc(sizeof(struct TableNames));
+
         sqlite3_exec(db, sql, callbackGetTableNames, names, errMessage);
+
         sqlite3_close(db);
 
         numTables = names->numNames;
@@ -1897,8 +1906,7 @@ void exportTable(Table table, char* filename, int trunc) {
     char* sql = malloc(sizeof(char) * 1000);
 
     strcpy(sql, "CREATE TABLE ");
-    char* tableName = strdup(table.name);
-    checkCharacters(tableName);
+    char* tableName = addQuotesToString(table.name);
 
     strcat(sql, tableName);
 
@@ -1906,8 +1914,7 @@ void exportTable(Table table, char* filename, int trunc) {
 
     char* colName;
     for(int i = 0; i < table.numCols; i++) {
-        colName = strdup(table.cols[i].name);
-        checkCharacters(colName);
+        colName = addQuotesToString(table.cols[i].name);
         strcat(sql, colName);
         strcat(sql, " ");
 
@@ -1926,8 +1933,7 @@ void exportTable(Table table, char* filename, int trunc) {
         strcat(sql, "(");
 
         for(int j = 0; j < table.numCols; j++) {
-            colName = strdup(table.cols[j].name);
-            checkCharacters(colName);
+            colName = addQuotesToString(table.cols[j].name);
             strcat(sql, colName);
             if(j < table.numCols - 1)
                 strcat(sql, ", ");
@@ -2064,8 +2070,21 @@ int callbackCreateTable(void* value, int numCols, char** values, char** colNames
 
 int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
-    // printf("%s\n", table->name);
-    // printf("YEET\n");
+
+    for(int i = 0; i < numCols; i++) {
+        Column currCol = nameToCol(table, colNames[i], NULL);
+
+        if(currCol.type == INTEGER) {
+            int* intVal = malloc(sizeof(int));;
+            sscanf(values[i], "%d", intVal);
+            values[i] = (void*)intVal;
+        }
+        else if(currCol.type == DECIMAL) {
+            double* decVal = malloc(sizeof(double));
+            sscanf(values[i], "%lf", decVal);
+            values[i] = (void*)decVal;
+        }
+    }
     insertRow(table, numCols, colNames, (void**)values);
     return 0;
 }
@@ -2089,6 +2108,64 @@ int callbackGetTableNames(void* value, int numCols, char** values, char** colNam
     return 0;
 }
 
+int callbackGetAttributes(void* value, int numCols, char** values, char** colNames) {
+    Table* table = ((Table*)value);
+    char* currCol = malloc(sizeof(char) * (strlen(values[0]) + 1));
+
+    for(int i = 0; i < table->numCols; i++) {
+        printf("%s\n", table->cols[i].name);
+        strcpy(currCol, strstr(values[0], addQuotesToString(table->cols[i].name)));
+        printf("%s\n", currCol);
+        if(currCol) {
+            char* colAttrs;
+            if(currCol[0] == '`') {
+                currCol++;
+                colAttrs = strstr(currCol, "`") + 2;
+            }
+            else {
+                colAttrs = strstr(currCol, " ") + 1;
+            }
+            if(strstr(colAttrs, ","))
+                strstr(colAttrs, ",")[0] = '\0';
+
+            printf("%s\n", colAttrs);
+
+            if(strstr(colAttrs, typeToString(INTEGER)))
+                table->cols[i].type = INTEGER;
+            else if(strstr(colAttrs, typeToString(CHAR)))
+                table->cols[i].type = CHAR;
+            else if(strstr(colAttrs, typeToString(DECIMAL)))
+                table->cols[i].type = DECIMAL;
+            else if(strstr(colAttrs, typeToString(DATE)))
+                table->cols[i].type = DATE;
+            else if(strstr(colAttrs, typeToString(BOOL)))
+                table->cols[i].type = BOOL;
+            // if(strstr(colAttrs, "PRIMARY KEY")) {
+            //     table->cols[i].primaryKey = 1;
+            // }
+            // if(strstr(colAttrs, "AUTOINCREMENT")) {
+            //     table->cols[i].autoIncrement = 1;
+            // }
+            // if(strstr(colAttrs, "NOT NULL")) {
+            //     table->cols[i].notNull = 1;
+            // }
+            // if(strstr(colAttrs, "FOREIGN KEY REFERENCES")) {
+            //     table->cols[i].foreignKey = 1;
+            //     //Code to get the foreign key column
+            // }
+            // if(strstr(colAttrs, "UNIQUE")) {
+            //     table->cols[i].unique = 1;
+            // }
+            // if(strstr(colAttrs, "DEFAULT")) {
+            //     table->cols[i].default = 1;
+            //     //Code to get the default value
+            // }
+        }
+    }
+    printf("%s\n", values[0]);
+    return 0;
+}
+
 int endsWith(char* str, char* ext) {
     int stringLength = strlen(str);
     int extLength = strlen(ext);
@@ -2100,21 +2177,36 @@ int endsWith(char* str, char* ext) {
     return 0;
 }
 
-void checkCharacters(char* string) {
-    for(int i = 0; i < strlen(string); i++) {
-        if(!(isalpha(string[i]) || isdigit(string[i]) || string[i] == '_')) {
-            string = realloc(string, strlen(string) + 3);
+char* addQuotesToString(char* string) {
 
-            strcat(string, "`");
-            for(int j = strlen(string); j > 0; j--) {
-                string[j] = string[j - 1];
+    char* newString = strdup(string);
+
+    for(int i = 0; i < strlen(newString); i++) {
+        if(!(isalpha(newString[i]) || isdigit(newString[i]) || newString[i] == '_')) {
+            newString = realloc(newString, strlen(newString) + 3);
+
+            strcat(newString, "`");
+            for(int j = strlen(newString); j > 0; j--) {
+                newString[j] = newString[j - 1];
             }
-            string[0] = '`';
+            newString[0] = '`';
             break;
         }
     }
+
+    return newString;
 }
 
+char* removeQuotesFromString(char* string) {
+    char* newString = strdup(string);
+
+    for(int i = 0; i < strlen(newString) - 2; i++)
+        newString[i] = newString[i + 1];
+    newString[strlen(newString) - 2] = '\0';
+
+    return newString;
+
+}
 
 Table* userTableOperator(int numTables, Table* tables) {
 
@@ -3622,6 +3714,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                             tables = NULL;
 
                             numTables = 0;
+
+                            currentTable = NULL;
+                            currTableIndex = -1;
                         }
                         break;
                 }
@@ -3692,6 +3787,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                                         freeTable(&tables[i]);
                                     if(tables != NULL)
                                         free(tables);
+                                    currentTable = NULL;
+                                    currTableIndex = -1;
                                     numTables = numTablesLoaded;
                                     tables = newTables;
                                 }
@@ -4276,19 +4373,40 @@ char* typeToString(int type) {
         return "INTEGER";
     else if(type == DECIMAL)
         return "DECIMAL";
+    else if(type == BOOL)
+        return "BOOL";
+    else if(type == DATE)
+        return "DATE";
+    else if(type == -1)
+        return "NULL";
     else
         return "UNKOWN TYPE";
 }
 
 int stringToType(char* type) {
-    if(strcmp(type, "CHAR") == 0)
+    char* charTypes = "CHARACTER VARCHAR VARYING CHARACTER NCHAR NATIVE CHARACTER(70) NVARCHAR(100) TEXT CLOB";
+    char* intTypes = "INT INTEGER TINYINT SMALLINT MEDIUMINT BIGINT UNSIGNED BIG INT INT2 INT8";
+    char* decimalTypes = "REAL DOUBLE DOUBLE PRECISION FLOAT NUMERIC DECIMAL";
+    char* boolTypes = "BOOLEAN BOOL";
+    char* dateTypes = "DATE DATETIME";
+
+    for(int i = 0; i < strlen(type); i++)
+        type[i] = toupper(type[i]);
+
+    if(strstr(charTypes, type))
         return CHAR;
-    else if(strcmp(type, "INTEGER") == 0)
+    else if(strstr(intTypes, type))
         return INTEGER;
-    else if(strcmp(type, "DECIMAL") == 0)
+    else if(strstr(decimalTypes, type))
         return DECIMAL;
-    else
+    else if(strstr(boolTypes, type))
+        return BOOL;
+    else if(strstr(dateTypes, type))
+        return DATE;
+    else if(strcmp(type, "NULL") == 0)
         return -1;
+    else
+        return -2;
 }
 
 int verifyDelete(void) {

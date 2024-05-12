@@ -56,9 +56,11 @@ typedef struct {
     // int notNull; //0 or 1 //take user input along with column name, ask for '-nn' right after the name.
     // int primaryKey; //0 or 1 //take user input along with column name, ask for '-p' right after the name.
     // int foreignKey; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
+    // Column* foreignKey; //take user input along with column name, ask for '-f' right after the name.
     // int chainedKey; //0 or 1 //the pointer is shared among multiple tables so that simultaneous updates aren't needed.
     // Value defaultValue; 
     // int unique; //0 or 1 //If duplicate values are allowed or not.
+    // int default; //0 or 1 //If a default value has been provided.
 } Column;
 
 typedef struct {
@@ -153,7 +155,8 @@ void printType(int type); //Implemented
 char* typeToString(int type); //Implemented
 int stringToType(char* type); //Implemented
 int endsWith(char* str, char* ext); //Implemented
-void checkCharacters(char* string); //Implemented
+char* addQuotesToString(char* string); //Implemented
+char* removeQuotesFromString(char* string); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
 Table copyTable(Table table); //Implemented
@@ -179,14 +182,15 @@ void* memdup(void* src, int numBytes);
 /**
  * Communication with SQL Language
 **/
-void exportTable(Table table, char* fileName, int trunc);
-Table* importTable(char* tableName, char* filename);
-int importDatabase(char* filename, Table** tables);
-int callbackCheckExists(void* value, int numCols, char** values, char** columnNames);
-int callbackPrintData(void* value, int numCols, char** values, char** columnNames);
-int callbackCreateTable(void* value, int numCols, char** values, char** colNames);
-int callbackInsertData(void* value, int numCols, char** values, char** colNames);
-int callbackGetTableNames(void* value, int numCols, char** values, char** colNames);
+void exportTable(Table table, char* fileName, int trunc); //Implemented
+Table* importTable(char* tableName, char* filename); //Implemented
+int importDatabase(char* filename, Table** tables); //Implemented
+int callbackCheckExists(void* value, int numCols, char** values, char** columnNames); //Implemented
+int callbackPrintData(void* value, int numCols, char** values, char** columnNames); //Implemented
+int callbackCreateTable(void* value, int numCols, char** values, char** colNames); //Implemented
+int callbackInsertData(void* value, int numCols, char** values, char** colNames); //Implemented
+int callbackGetTableNames(void* value, int numCols, char** values, char** colNames); //Implemented
+int callbackGetAttributes(void* value, int numCols, char** values, char** colNames);
 Table* userTableOperator(int numTables, Table* tables);
 
 /**
