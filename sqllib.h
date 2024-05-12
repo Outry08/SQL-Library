@@ -13,6 +13,7 @@
 #define MAX_LEN 50
 
 typedef struct {
+    //-1 = unused, signifying what to output
     int year;
     int month;
     int day;
@@ -26,6 +27,7 @@ typedef enum {
     INTEGER = 1,
     DECIMAL = 2,
     DATE = 3,
+    BOOL = 4,
 } TypeEnum;
 
 typedef union {
@@ -33,6 +35,7 @@ typedef union {
     int INTEGER;
     double DECIMAL;
     Date DATE;
+    int BOOL;
 } ElementUnion;
 
 typedef struct {
