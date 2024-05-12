@@ -148,6 +148,7 @@ int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
 void printType(int type); //Implemented
 char* typeToString(int type); //Implemented
+int stringToType(char* type); //Implemented
 int endsWith(char* str, char* ext); //Implemented
 void checkCharacters(char* string); //Implemented
 
