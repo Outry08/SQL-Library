@@ -1638,7 +1638,7 @@ Table* importTable(char* tableName, char* filename) {
             // int tableExists = 0;
 
             char line[1000];
-            char* createCmd = malloc(sizeof(char) * 1000);
+            char* createCmd = malloc(sizeof(char) * 10000);
 
             //LIMITATION: CREATE AND INSERT COMMANDS MUST BE ON SEPARATE LINES OF GIVEN FILE. FIX IN THE FUTURE!
             while(fgets(line, 1000, fp)) {
@@ -1791,6 +1791,8 @@ Table* importTable(char* tableName, char* filename) {
             free(createCmd);
 
             table = importTable(tableName, "load.db");
+
+            remove("load.db");
         }
     }
 
@@ -1857,20 +1859,34 @@ int importDatabase(char* filename, Table** tables) {
     }
     else {
 
-        // FILE* fp = fopen(filename, "r");
-        // if(fp) {
-        //     char* tableCreateLine = malloc(sizeof(char) * 1000);
-        //     strcpy(tableCreateLine, "CREATE TABLE ");
-        //     strcat(tableCreateLine, properName);
+        FILE* fp = fopen(filename, "r");
+        if(fp) {
+            char* sql = malloc(sizeof(char) * 10000);
+            char line[1000];
+            strcpy(sql, "");
 
-        //     int tableExists = 0;
+            while(fgets(line, 1000, fp))
+                strcat(sql, line);
 
-        //     char line[100];
-        //     while(fgets(line, 100, fp)) {
+            printf("%s\n", sql);
+            sqlite3* db;
+            char** errMessage = malloc(sizeof(char*));
+            *errMessage = strdup("Error: SQL Execution Failed");
 
-        //     }
-        // }
-        // fclose(fp);
+            truncate("load.db", 0);
+
+            sqlite3_open("load.db", &db);
+            sqlite3_exec(db, sql, NULL, NULL, errMessage);
+            sqlite3_close(db);
+            free(errMessage);
+            free(sql);
+
+            numTables = importDatabase("load.db", tables);
+
+            remove("load.db");
+
+        }
+        fclose(fp);
     }
 
     return numTables;
@@ -3603,6 +3619,8 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                             free(tables);
 
+                            tables = NULL;
+
                             numTables = 0;
                         }
                         break;
@@ -3672,8 +3690,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 if(numTablesLoaded > 0) {
                                     for(int i = 0; i < numTables; i++)
                                         freeTable(&tables[i]);
-
-                                    free(tables);
+                                    if(tables != NULL)
+                                        free(tables);
                                     numTables = numTablesLoaded;
                                     tables = newTables;
                                 }
