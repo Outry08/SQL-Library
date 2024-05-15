@@ -10,7 +10,7 @@
 #include <unistd.h>
 #define max(a, b) ((a) > (b) ? (a) : (b))
 #define min(a, b) ((a) > (b) ? (b) : (a))
-#define MAX_LEN 50
+#define MAX_LEN 100
 
 typedef struct {
     //-1 = unused, signifying what to output

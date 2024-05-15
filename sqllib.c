@@ -157,8 +157,10 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                 currCol.values[table->numRows - 1].val.DECIMAL = *(double*)values[i];
             }
             else if(currCol.type == BOOL) {
+                printf("HI\n");
                 currCol.values[table->numRows - 1].isNULL = 0;
                 currCol.values[table->numRows - 1].val.BOOL = *(int*)values[i];
+                printf("BYE\n");
             }
             else if(currCol.type == DATE) {
                 printf("DATE datatype support coming soon.\n");
@@ -1420,22 +1422,27 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
     int type = col.type;
     int isMixed;
     ElementUnion dummy;
+    int nullDummy;
+
     if(ascending) {
         if(type == INTEGER) {
             do {
                 isMixed = 0;
                 for(int i = 0; i < table->numRows - 1;i++) {
                     if(table->cols[colIndex].values[i].isNULL)
-                        table->cols[colIndex].values[i].val.INTEGER = INT_MIN;
+                        table->cols[colIndex].values[i].val.INTEGER = INT_MAX;
                     if(table->cols[colIndex].values[i + 1].isNULL)
-                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MIN;
+                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MAX;
 
                     if(table->cols[colIndex].values[i].val.INTEGER > table->cols[colIndex].values[i + 1].val.INTEGER) {
                         isMixed = 1;
-                        for(int j = 0; j < table->numCols;j++) {
+                        for(int j = 0; j < table->numCols; j++) {
                             dummy = table->cols[j].values[i].val;
+                            nullDummy = table->cols[j].values[i].isNULL;
                             table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                             table->cols[j].values[i + 1].val = dummy;
+                            table->cols[j].values[i + 1].isNULL = nullDummy;
                         }
                     }
                 }
@@ -1447,16 +1454,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MIN__;
+                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MAX__;
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MIN__;
+                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MAX__;
 
                         if(table->cols[colIndex].values[i].val.DECIMAL > table->cols[colIndex].values[i + 1].val.DECIMAL) {
                             isMixed = 1;
-                            for(int j = 0; j < table->numCols;j++) {
+                            for(int j = 0; j < table->numCols; j++) {
                                 dummy = table->cols[j].values[i].val;
+                                nullDummy = table->cols[j].values[i].isNULL;
                                 table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                                 table->cols[j].values[i + 1].val = dummy;
+                                table->cols[j].values[i + 1].isNULL = nullDummy;
                             }
                         }
                     }
@@ -1469,16 +1479,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.CHAR = "";
+                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.CHAR = "";
+                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
                         if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) > 0) {
                             isMixed = 1;
-                            for(int j = 0; j < table->numCols;j++) {
+                            for(int j = 0; j < table->numCols; j++) {
                                 dummy = table->cols[j].values[i].val;
+                                nullDummy = table->cols[j].values[i].isNULL;
                                 table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                                 table->cols[j].values[i + 1].val = dummy;
+                                table->cols[j].values[i + 1].isNULL = nullDummy;
                             }
                         }
                     }
@@ -1490,16 +1503,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                 isMixed = 0;
                 for(int i = 0; i < table->numRows - 1;i++) {
                     if(table->cols[colIndex].values[i].isNULL)
-                        table->cols[colIndex].values[i].val.BOOL = -1;
+                        table->cols[colIndex].values[i].val.BOOL = 2;
                     if(table->cols[colIndex].values[i + 1].isNULL)
-                        table->cols[colIndex].values[i + 1].val.BOOL = -1;
+                        table->cols[colIndex].values[i + 1].val.BOOL = 2;
 
                     if(table->cols[colIndex].values[i].val.BOOL > table->cols[colIndex].values[i + 1].val.BOOL) {
                         isMixed = 1;
-                        for(int j = 0; j < table->numCols;j++) {
+                        for(int j = 0; j < table->numCols; j++) {
                             dummy = table->cols[j].values[i].val;
+                            nullDummy = table->cols[j].values[i].isNULL;
                             table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                             table->cols[j].values[i + 1].val = dummy;
+                            table->cols[j].values[i + 1].isNULL = nullDummy;
                         }
                     }
                 }
@@ -1515,16 +1531,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                 isMixed = 0;
                 for(int i = 0; i < table->numRows - 1;i++) {
                     if(table->cols[colIndex].values[i].isNULL)
-                        table->cols[colIndex].values[i].val.INTEGER = INT_MIN;
+                        table->cols[colIndex].values[i].val.INTEGER = INT_MAX;
                     if(table->cols[colIndex].values[i + 1].isNULL)
-                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MIN;
+                        table->cols[colIndex].values[i + 1].val.INTEGER = INT_MAX;
 
                     if(table->cols[colIndex].values[i].val.INTEGER < table->cols[colIndex].values[i + 1].val.INTEGER) {
                         isMixed = 1;
-                        for(int j = 0; j < table->numCols;j++) {
+                        for(int j = 0; j < table->numCols; j++) {
                             dummy = table->cols[j].values[i].val;
+                            nullDummy = table->cols[j].values[i].isNULL;
                             table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                             table->cols[j].values[i + 1].val = dummy;
+                            table->cols[j].values[i + 1].isNULL = nullDummy;
                         }
                     }
                 }
@@ -1536,16 +1555,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MIN__;
+                            table->cols[colIndex].values[i].val.DECIMAL = __DBL_MAX__;
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MIN__;
+                            table->cols[colIndex].values[i + 1].val.DECIMAL = __DBL_MAX__;
 
                         if(table->cols[colIndex].values[i].val.DECIMAL < table->cols[colIndex].values[i + 1].val.DECIMAL) {
                             isMixed = 1;
-                            for(int j = 0; j < table->numCols;j++) {
+                            for(int j = 0; j < table->numCols; j++) {
                                 dummy = table->cols[j].values[i].val;
+                                nullDummy = table->cols[j].values[i].isNULL;
                                 table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                                 table->cols[j].values[i + 1].val = dummy;
+                                table->cols[j].values[i + 1].isNULL = nullDummy;
                             }
                         }
                     }
@@ -1558,16 +1580,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.CHAR = "";
+                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.CHAR = "";
+                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
                         if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) < 0) {
                             isMixed = 1;
-                            for(int j = 0; j < table->numCols;j++) {
+                            for(int j = 0; j < table->numCols; j++) {
                                 dummy = table->cols[j].values[i].val;
+                                nullDummy = table->cols[j].values[i].isNULL;
                                 table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                                table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                                 table->cols[j].values[i + 1].val = dummy;
+                                table->cols[j].values[i + 1].isNULL = nullDummy;
                             }
                         }
                     }
@@ -1579,16 +1604,19 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                 isMixed = 0;
                 for(int i = 0; i < table->numRows - 1;i++) {
                     if(table->cols[colIndex].values[i].isNULL)
-                        table->cols[colIndex].values[i].val.BOOL = -1;
+                        table->cols[colIndex].values[i].val.BOOL = 2;
                     if(table->cols[colIndex].values[i + 1].isNULL)
-                        table->cols[colIndex].values[i + 1].val.BOOL = -1;
+                        table->cols[colIndex].values[i + 1].val.BOOL = 2;
 
                     if(table->cols[colIndex].values[i].val.BOOL < table->cols[colIndex].values[i + 1].val.BOOL) {
                         isMixed = 1;
-                        for(int j = 0; j < table->numCols;j++) {
+                        for(int j = 0; j < table->numCols; j++) {
                             dummy = table->cols[j].values[i].val;
+                            nullDummy = table->cols[j].values[i].isNULL;
                             table->cols[j].values[i].val = table->cols[j].values[i + 1].val;
+                            table->cols[j].values[i].isNULL = table->cols[j].values[i + 1].isNULL;
                             table->cols[j].values[i + 1].val = dummy;
+                            table->cols[j].values[i + 1].isNULL = nullDummy;
                         }
                     }
                 }
@@ -1702,6 +1730,7 @@ Table* importTable(char* tableName, char* filename) {
                 }
             }
             fclose(fp);
+
             printf("%s\n", createCmd);
             sqlite3* db;
             char** errMessage = malloc(sizeof(char*));
@@ -1829,7 +1858,11 @@ void exportTable(Table table, char* filename, int trunc) {
         strcat(sql, colName);
         strcat(sql, " ");
 
-        strcat(sql, typeToString(table.cols[i].type));
+        if(table.cols[i].type != BOOL)
+            strcat(sql, typeToString(table.cols[i].type));
+        else
+            strcat(sql, "BIT");
+
         if(i < table.numCols - 1)
             strcat(sql, ", ");
 
@@ -1875,10 +1908,13 @@ void exportTable(Table table, char* filename, int trunc) {
                 strcat(sql, chrString);
             }
             else if(table.cols[j].type == BOOL) {
-                if(table.cols[j].values[i].val.BOOL == 1)
-                    strcat(sql, "TRUE");
-                else
-                    strcat(sql, "FALSE");
+                char boolString[MAX_LEN];
+                sprintf(boolString, "%d", table.cols[j].values[i].val.BOOL);
+                strcat(sql, boolString);
+                // if(table.cols[j].values[i].val.BOOL == 1)
+                //     strcat(sql, "TRUE");
+                // else
+                //     strcat(sql, "FALSE");
             }
             else if(table.cols[j].type == DATE) {
                 printf("DATE datatype functionality coming soon.\n");
@@ -1901,7 +1937,7 @@ void exportTable(Table table, char* filename, int trunc) {
         char** errMessage = malloc(sizeof(char*));
         *errMessage = strdup("Error: SQL Execution Failed");
 
-        char* delPrevTable = malloc(sizeof(char) * 100);
+        char* delPrevTable = malloc(sizeof(char) * MAX_LEN);
         strcpy(delPrevTable, "DROP TABLE IF EXISTS ");
         strcat(delPrevTable, tableName);
 
@@ -1923,11 +1959,11 @@ void exportTable(Table table, char* filename, int trunc) {
 
             int tableExists = 0;
 
-            char line[100];
-            while(fgets(line, 100, fp)) {
+            char line[1000];
+            while(fgets(line, 1000, fp)) {
                 if(!tableExists && strstr(line, tableCreateLine)) {
                     tableExists = 1;
-                    fgets(line, 100, fp);
+                    fgets(line, 1000, fp);
                     if(!strstr(line, "INSERT INTO"))
                         tableExists = 0;
                 }
@@ -1976,32 +2012,42 @@ int callbackCreateTable(void* value, int numCols, char** values, char** colNames
 int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
 
+    printf("INSERT TIME\n");
+
     for(int i = 0; i < numCols; i++) {
         Column currCol = nameToCol(table, colNames[i], NULL);
 
-        if(currCol.type == INTEGER) {
-            int* intVal = malloc(sizeof(int));;
-            sscanf(values[i], "%d", intVal);
-            values[i] = (void*)intVal;
-        }
-        else if(currCol.type == DECIMAL) {
-            double* decVal = malloc(sizeof(double));
-            sscanf(values[i], "%lf", decVal);
-            values[i] = (void*)decVal;
-        }
-        else if(currCol.type == BOOL) {
-            int* boolVal = malloc(sizeof(int));
-            if(strcmp(values[i], "TRUE") == 0)
-                *boolVal = 1;
-            else
-                *boolVal = 0;
-            values[i] = (void*)boolVal;
-        }
-        else if(currCol.type == DATE) {
-            printf("DATE datatype functionality coming soon.\n");
+        if(values[i] != NULL) {
+            if(currCol.type == INTEGER) {
+                printf("INTEGER\n");
+                int* intVal = malloc(sizeof(int));
+                sscanf(values[i], "%d", intVal);
+                values[i] = (void*)intVal;
+            }
+            else if(currCol.type == DECIMAL) {
+                printf("DECIMAL\n");
+                double* decVal = malloc(sizeof(double));
+                sscanf(values[i], "%lf", decVal);
+                values[i] = (void*)decVal;
+            }
+            else if(currCol.type == BOOL) {
+                printf("BOOL\n");
+                int* boolVal = malloc(sizeof(int));
+                sscanf(values[i], "%d", boolVal);
+                values[i] = (void*)boolVal;
+                // if(strcmp(values[i], "TRUE") == 0)
+                //     *boolVal = 1;
+                // else
+                //     *boolVal = 0;
+            }
+            else if(currCol.type == DATE) {
+                printf("DATE datatype functionality coming soon.\n");
+            }
         }
     }
     insertRow(table, numCols, colNames, (void**)values);
+
+    printf("DONE INSERTING\n");
     return 0;
 }
 
@@ -2050,7 +2096,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 table->cols[i].type = DECIMAL;
             else if(strstr(colAttrs, typeToString(DATE)))
                 table->cols[i].type = DATE;
-            else if(strstr(colAttrs, typeToString(BOOL)))
+            else if(strstr(colAttrs, typeToString(BOOL)) || strstr(colAttrs, "BIT"))
                 table->cols[i].type = BOOL;
             // if(strstr(colAttrs, "PRIMARY KEY")) {
             //     table->cols[i].primaryKey = 1;
@@ -3132,15 +3178,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
 
             case 10:
-                //"10. PIN"
+                //"10. JOIN"
                 break;
 
             case 11:
-                //"11. JOIN"
-                break;
-
-            case 12:
-                //"12. COPY"
+                //"11. COPY"
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
@@ -3215,8 +3257,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 break;
-            case 13:
-                //"13. PASTE"
+            case 12:
+                //"12. PASTE"
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
@@ -3531,8 +3573,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 break;
-            case 14:
-                //"14. DELETE"
+            case 13:
+                //"13. DELETE"
 
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
@@ -3689,7 +3731,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                     if(numDelCols + 1 <= currentTable->numCols) {
 
-                                        printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                        printf("Would you like to add another column to have its values deleted? (yes/no): ");
                                         do {
                                             fgetsUntil(yesno, MAX_LEN);
                                             if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
@@ -3772,8 +3814,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                         break;
                 }
                 break;
-            case 15: {
-                //"15. IMPORT"
+            case 14: {
+                //"14. IMPORT"
                 switch(menuChoices[1]) {
                     case 1: {
                         // "1. IMPORT table from file"
@@ -3853,8 +3895,8 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 break;
             }
-            case 16:
-                //"16. EXPORT"
+            case 15:
+                //"15. EXPORT"
                 if(numTables <= 0) {
                     printf("There are no tables to export.\n");
                     break;
@@ -3962,14 +4004,15 @@ Table* userTableOperator(int numTables, Table* tables) {
                 switch(menuChoices[1]) {
                     case 1:
                         // "1. SAVE & EXIT"
-                        printf("Saving\n");
+                        printf("Saving");
                         for(int i = 0; i < 3; i++) {
                             cql_sleep(750);
-                            printf(".\n");
+                            printf(".");
+                            fflush(stdout);
                         }
-                        cql_sleep(1000);
-                        printf("Database Saved.\n");
-                        break;
+                        cql_sleep(750);
+                        printf("\nDatabase Saved.\n");
+                        cql_sleep(250);
                     case 2:
                         // "2. EXIT WITHOUT SAVING"
                         printf("Exiting Program.\n");
@@ -4005,20 +4048,19 @@ int* actionMenu(Table* table) {
             "7. UPDATE\n"
             "8. MOVE\n"
             "9. SORT\n"
-            "10. PIN\n"
-            "11. JOIN\n"
-            "12. COPY\n"
-            "13. PASTE\n"
-            "14. DELETE\n"
-            "15. IMPORT\n"
-            "16. EXPORT\n"
+            "10. JOIN\n"
+            "11. COPY\n"
+            "12. PASTE\n"
+            "13. DELETE\n"
+            "14. IMPORT\n"
+            "15. EXPORT\n"
             "0. EXIT\n"
             "Your choice: ");
         do {
             scanfWell("%d", &menuChoices[0]);
-            if(menuChoices[0] < 0 || menuChoices[0] > 16)
-                printf("Please choose between 0 and 16: ");
-        } while(menuChoices[0] < 0 || menuChoices[0] > 16);
+            if(menuChoices[0] < 0 || menuChoices[0] > 15)
+                printf("Please choose between 0 and 15: ");
+        } while(menuChoices[0] < 0 || menuChoices[0] > 15);
 
         switch(menuChoices[0]) {
             case 1:
@@ -4074,11 +4116,6 @@ int* actionMenu(Table* table) {
                 break;
 
             case 10:
-                printf("1. PIN column in current table\n"
-                    "2. PIN row in current table\n");
-                numOptions = 2;
-
-            case 11:
                 printf("1. CROSS JOIN\n"
                     "2. INNER JOIN\n"
                     "3. OUTER JOIN\n"
@@ -4086,20 +4123,20 @@ int* actionMenu(Table* table) {
                 numOptions = 4;
                 break;
 
-            case 12:
+            case 11:
                 printf("1. COPY row in current table\n"
                     "2. COPY column in current table\n"
                     "3. Make a COPY of current table\n");
                 numOptions = 3;
                 break;
 
-            case 13:
+            case 12:
                 printf("1. PASTE row into current table\n"
                     "2. PASTE column into current table\n");
                 numOptions = 2;
                 break;
 
-            case 14:
+            case 13:
                 printf("1. DELETE row(s) from current table\n"
                     "2. DELETE column(s) from current table\n"
                     "3. DELETE value(s) from current table\n"
@@ -4108,13 +4145,13 @@ int* actionMenu(Table* table) {
                 numOptions = 5;
                 break;
 
-            case 15:
+            case 14:
                 printf("1. IMPORT table from file\n"
                     "2. IMPORT database from file\n");
                 numOptions = 2;
                 break;
 
-            case 16:
+            case 15:
                 printf("1. EXPORT current table to file\n"
                     "2. EXPORT full database to file\n");
                 numOptions = 2;
@@ -4458,10 +4495,10 @@ char* typeToString(int type) {
 }
 
 int stringToType(char* type) {
-    char* charTypes = "CHARACTER VARCHAR VARYING CHARACTER NCHAR NATIVE CHARACTER(70) NVARCHAR(100) TEXT CLOB";
+    char* charTypes = "CHARACTER VARCHAR VARYING CHARACTER NCHAR NATIVE CHARACTER NVARCHAR TEXT CLOB";
     char* intTypes = "INT INTEGER TINYINT SMALLINT MEDIUMINT BIGINT UNSIGNED BIG INT INT2 INT8";
     char* decimalTypes = "REAL DOUBLE DOUBLE PRECISION FLOAT NUMERIC DECIMAL";
-    char* boolTypes = "BOOLEAN BOOL";
+    char* boolTypes = "BOOLEAN BOOL BIT";
     char* dateTypes = "DATE DATETIME";
 
     for(int i = 0; i < strlen(type); i++)

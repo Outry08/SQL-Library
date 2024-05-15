@@ -14,7 +14,6 @@ Execute the program with ./sql
 ## Visuals
 
 ## Roadmap
-- Add BOOL datatype funcitonality.
 - Add DATE datatype functionality.
 - Look into BLOB datatype support.
 - Include aggregate functions, distinct, order by, and group by into select function.
