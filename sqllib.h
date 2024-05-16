@@ -71,7 +71,7 @@ typedef struct {
     int selected;
 } Table;
 
-//Possinly add BETWEEN functionality to this struct? As an allowed comparion?
+//Possibly add BETWEEN functionality to this struct? As an allowed comparion?
 typedef struct {
     char* searchColName;
     char* comparison;
@@ -113,8 +113,7 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
 void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
 int getValIndex(Column col, void* value);
-void sortTableByCol(Table* table, char* colName, int ascending);
-
+void sortTableByCol(Table* table, char* colName, int ascending); //Implemented
 
 /**
  * C Types to SQL Table Types and Vice Versa
@@ -168,6 +167,7 @@ Date stringToDate(char* dateString);
 
 int isAggregate(char* name); //Implemented
 char* getAggregateName(char* name); //Implemented
+char* getColNameFromAggregate(char* name);
 
 int verifyDelete(void); //Implemented
 
@@ -190,7 +190,7 @@ int callbackPrintData(void* value, int numCols, char** values, char** columnName
 int callbackCreateTable(void* value, int numCols, char** values, char** colNames); //Implemented
 int callbackInsertData(void* value, int numCols, char** values, char** colNames); //Implemented
 int callbackGetTableNames(void* value, int numCols, char** values, char** colNames); //Implemented
-int callbackGetAttributes(void* value, int numCols, char** values, char** colNames);
+int callbackGetAttributes(void* value, int numCols, char** values, char** colNames); //Implemented
 Table* userTableOperator(int numTables, Table* tables);
 
 /**

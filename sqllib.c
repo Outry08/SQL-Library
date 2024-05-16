@@ -589,17 +589,17 @@ Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* co
 
     Table selectedTable;
 
-    if(sel.numCols == table.numCols) {
-        for(int i = 0; i < sel.numCols; i++)
-            if(sel.colNames[i] != NULL)
-                free(sel.colNames[i]);
+    // if(sel.numCols == table.numCols) {
+    //     for(int i = 0; i < sel.numCols; i++)
+    //         if(sel.colNames[i] != NULL)
+    //             free(sel.colNames[i]);
 
-        sel.numCols = tableCopy.numCols;
+    //     sel.numCols = tableCopy.numCols;
 
-        for(int i = 0; i < tableCopy.numCols; i++) {
-            sel.colNames[i] = strdup(tableCopy.cols[i].name);
-        }
-    }
+    //     for(int i = 0; i < tableCopy.numCols; i++) {
+    //         sel.colNames[i] = strdup(tableCopy.cols[i].name);
+    //     }
+    // }
     selectedTable = selCreate(tableCopy, sel.numCols, sel.colNames);
 
     return selectedTable;
@@ -623,7 +623,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     newTable.numCols = numCols;
     newTable.numRows = baseTable.numRows;
 
-    // int allAggs = 1;
+    int allAggs = 1;
 
     // char* newName;
 
@@ -631,24 +631,166 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
         if(!isAggregate(colNames[i])) {
             newTable.cols[i] = copyColumn(baseTable.numRows, nameToCol(&baseTable, colNames[i], NULL));
 
-            // allAggs = 0
+            allAggs = 0;
         }
-        // else {
-        //     newName = &(strchr(colNames[i], '(')[1]);
-        //     for(int j = 0; j < strlen(newName); j++)
-        //         if(newName[j] == ')')
-        //             newName[j] = '\0';
-        //     newTable.cols[i].values = malloc(sizeof(Value) * newTable.numRows));
-        //     newTable.cols[i].name = getAggregateName(colNames[i]);
-        //     newTable.cols[i].type = nameToCol(&baseTable, newName).type;
-        // }
+        else {
+            char* colName = getColNameFromAggregate(colNames[i]);
+
+            newTable.cols[i].values = malloc(sizeof(Value) * newTable.numRows);
+            newTable.cols[i].name = strdup(getAggregateName(colNames[i]));
+            newTable.cols[i].type = nameToCol(&baseTable, colName, NULL).type;
+
+            if(strcmp(newTable.cols[i].name, "COUNT") == 0) {
+                newTable.cols[i].type = INTEGER;
+                newTable.cols[i].values[0].val.INTEGER = newTable.numRows;
+                newTable.cols[i].values[0].isNULL = 0;
+            }
+            else if(strcmp(newTable.cols[i].name, "AVG") == 0) {
+                double avg = 0;
+                if(newTable.cols[i].type == DECIMAL) {
+                    int count = 0;
+                    double sum = 0;
+
+                    for(int j = 0; j < newTable.numRows; j++) {
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL) {
+                            sum += nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL;
+                            count++;
+                        }
+                    }
+                    if(count > 0) {
+                        avg = sum / count;
+                        newTable.cols[i].values[0].val.DECIMAL = avg;
+                        newTable.cols[i].values[0].isNULL = 0;
+                    }
+                    else {
+                        newTable.cols[i].values[0].isNULL = 0;
+                    }
+                }
+                else if(newTable.cols[i].type == INTEGER) {
+                    printf("INTEGER\n");
+                    int count = 0;
+                    int sum = 0;
+                    for(int j = 0; j < newTable.numRows; j++) {
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL) {
+                            printf("YEE HAW\n");
+                            sum += nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER;
+                            count++;
+                        }
+                    }
+                    avg = (double)sum / count;
+                    newTable.cols[i].type = DECIMAL;
+                    newTable.cols[i].values[0].val.DECIMAL = avg;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else {
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+
+            }
+            else if(strcmp(newTable.cols[i].name, "SUM") == 0) {
+                if(newTable.cols[i].type == DECIMAL) {
+                    double sum = 0;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL)
+                            sum += nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL;
+                    newTable.cols[i].values[0].val.DECIMAL = sum;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == INTEGER) {
+                    int sum = 0;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL)
+                            sum += nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER;
+                    newTable.cols[i].values[0].val.INTEGER = sum;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else {
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+            }
+            else if(strcmp(newTable.cols[i].name, "MAX") == 0) {
+                if(newTable.cols[i].type == DECIMAL) {
+                    double max = __DBL_MIN__;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL > max)
+                            max = nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL;
+                    newTable.cols[i].values[0].val.DECIMAL = max;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == INTEGER) {
+                    int max = INT_MIN;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER > max)
+                            max = nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER;
+                    newTable.cols[i].values[0].val.INTEGER = max;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == CHAR) {
+                    char* max = malloc(sizeof(char) * MAX_LEN);
+                    strcpy(max, "ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && strcmp(nameToCol(&baseTable, colName, NULL).values[j].val.CHAR, max) < 0)
+                            strcpy(max, nameToCol(&baseTable, colName, NULL).values[j].val.CHAR);
+                    newTable.cols[i].values[0].val.CHAR = max;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == DATE) {
+                    printf("DATE datatype support yet to be implemented.\n");
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+                else {
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+            }
+            else if(strcmp(newTable.cols[i].name, "MIN") == 0) {
+                if(newTable.cols[i].type == DECIMAL) {
+                    double min = __DBL_MAX__;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL < min)
+                            min = nameToCol(&baseTable, colName, NULL).values[j].val.DECIMAL;
+                    newTable.cols[i].values[0].val.DECIMAL = min;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == INTEGER) {
+                    int min = INT_MAX;
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER < min)
+                            min = nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER;
+                    newTable.cols[i].values[0].val.INTEGER = min;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == CHAR) {
+                    char* min = malloc(sizeof(char) * MAX_LEN);
+                    strcpy(min, "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA");
+                    for(int j = 0; j < newTable.numRows; j++)
+                        if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL && strcmp(nameToCol(&baseTable, colName, NULL).values[j].val.CHAR, min) > 0)
+                            strcpy(min, nameToCol(&baseTable, colName, NULL).values[j].val.CHAR);
+                    newTable.cols[i].values[0].val.CHAR = min;
+                    newTable.cols[i].values[0].isNULL = 0;
+                }
+                else if(newTable.cols[i].type == DATE) {
+                    printf("DATE datatype support yet to be implemented.\n");
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+                else {
+                    newTable.cols[i].values[0].isNULL = 1;
+                }
+            }
+
+            for(int j = 1; j < newTable.numRows; j++)
+                newTable.cols[i].values[j].isNULL = 1;
+        }
     }
 
-    // if(allAggs) {
-    //     for(int i = 0; i < numCols; i++)
-    //         newTable.cols[i].values = realloc(newTable.cols[i].values, 1);
-    //     newTable.numRows = 1;
-    // }
+    if(allAggs) {
+        for(int i = 0; i < numCols; i++)
+            newTable.cols[i].values = realloc(newTable.cols[i].values, sizeof(Value));
+        newTable.numRows = 1;
+    }
+
+    for(int i = newTable.numCols - 1; i >= 0; i--) {
+        checkColumnNames(newTable, newTable.cols[i].name, i);
+    }
 
     newTable.selected = 1;
 
@@ -772,11 +914,13 @@ char* notConnectives(int numConns, char* conns) {
 
 Column nameToCol(Table* table, char* colName, int* colIndex) {
 
-    for(int i = 0; i < table->numCols; i++) {
-        if(strcmp(table->cols[i].name, colName) == 0) {
-            if(colIndex != NULL)
-                *colIndex = i;
-            return table->cols[i];
+    if(colName != NULL) {
+        for(int i = 0; i < table->numCols; i++) {
+            if(strcmp(table->cols[i].name, colName) == 0) {
+                if(colIndex != NULL)
+                    *colIndex = i;
+                return table->cols[i];
+            }
         }
     }
 
@@ -785,7 +929,6 @@ Column nameToCol(Table* table, char* colName, int* colIndex) {
     errCol.type = -1;
     if(colIndex != NULL)
         *colIndex = -1;
-    printf("Error: Failed to find column '%s' in table '%s'\n", colName, table->name);
 
     return errCol;
 }
@@ -1064,11 +1207,29 @@ char* getAggregateName(char* name) {
     else if(strstr(name, "AVG("))
         return "AVG";
     else if(strstr(name, "MAX("))
-        return "MIN";
+        return "MAX";
     else if(strstr(name, "MIN("))
         return "MIN";
     else
         return name;
+}
+
+char* getColNameFromAggregate(char* name) {
+    char* colName;
+
+    if(name != NULL && strchr(name, '('))
+        colName = strchr(name, '(') + 1;
+    else
+        return NULL;
+
+    for(int i = 0; i < strlen(colName); i++) {
+        if(colName[i] == ')') {
+            colName[i] = '\0';
+            break;
+        }
+    }
+
+    return colName;
 }
 
 Where newWhere(char* searchColName, char* comparison, void* searchValue) {
@@ -1479,9 +1640,9 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
                         if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) > 0) {
                             isMixed = 1;
@@ -1580,9 +1741,9 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
                         if(table->cols[colIndex].values[i].isNULL)
-                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                            table->cols[colIndex].values[i].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
                         if(table->cols[colIndex].values[i + 1].isNULL)
-                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
+                            table->cols[colIndex].values[i + 1].val.CHAR = strdup("ZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZZ");
 
                         if(strcmp(table->cols[colIndex].values[i].val.CHAR, table->cols[colIndex].values[i + 1].val.CHAR) < 0) {
                             isMixed = 1;
@@ -2377,27 +2538,28 @@ Table* userTableOperator(int numTables, Table* tables) {
                 } while(sel.numCols <= 0 || sel.numCols > currentTable->numCols);
 
                 sel.colNames = malloc(sizeof(char*) * sel.numCols);
-                if(sel.numCols < currentTable->numCols) {
-                    for(int i = 0; i < sel.numCols; i++) {
-                        sel.colNames[i] = malloc(sizeof(char) * MAX_LEN);
-
-                        do {
-                            printf("Name for select column #%d: ", i + 1);
-                            fgetsUntil(sel.colNames[i], MAX_LEN);
-                            if(nameToCol(currentTable, sel.colNames[i], NULL).type == -1)
-                                continue;
-                            else
-                                break;
-                        } while(1);
-                        sel.colNames[i] = realloc(sel.colNames[i], sizeof(char) * (strlen(sel.colNames[i]) + 1));
-                    }
+                // if(sel.numCols < currentTable->numCols) {
+                for(int i = 0; i < sel.numCols; i++) {
+                    sel.colNames[i] = malloc(sizeof(char) * MAX_LEN);
+                    printf("Name for select column #%d: ", i + 1);
+                    do {
+                        fgetsUntil(sel.colNames[i], MAX_LEN);
+                        if(nameToCol(currentTable, sel.colNames[i], NULL).type == -1 && nameToCol(currentTable, getColNameFromAggregate(sel.colNames[i]), NULL).type == -1) {
+                            printf("Please enter a column name that exists in your table: ");
+                            continue;
+                        }
+                        else
+                            break;
+                    } while(1);
+                    sel.colNames[i] = realloc(sel.colNames[i], sizeof(char) * (strlen(sel.colNames[i]) + 1));
                 }
-                else {
-                    for(int i = 0; i < sel.numCols; i++) {
-                        sel.colNames[i] = NULL;
-                        //sel.colnames[0] = "*";
-                    }
-                }
+                // }
+                // else {
+                //     for(int i = 0; i < sel.numCols; i++) {
+                //         sel.colNames[i] = NULL;
+                //         //sel.colnames[0] = "*";
+                //     }
+                // }
 
                 printf("Would you like to filter your result with a where statement? (yes/no): ");
                 do {
