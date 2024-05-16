@@ -167,7 +167,7 @@ Date stringToDate(char* dateString);
 
 int isAggregate(char* name); //Implemented
 char* getAggregateName(char* name); //Implemented
-char* getColNameFromAggregate(char* name);
+char* getColNameFromAggregate(char* name); //Implemented
 
 int verifyDelete(void); //Implemented
 
