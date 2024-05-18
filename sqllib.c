@@ -587,6 +587,9 @@ Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* co
     if(numWheres > 0)
         delete(&tableCopy, numWheres, notWheres(numWheres, wheres), notConnectives(numWheres - 1, conns));
 
+    if(sel.distinct)
+        deleteDuplicateValues(&tableCopy, sel.numCols, sel.colNames);
+
     Table selectedTable;
 
     // if(sel.numCols == table.numCols) {
@@ -795,6 +798,160 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     newTable.selected = 1;
 
     return newTable;
+
+}
+
+void deleteDuplicateValues(Table* table, int numCols, char** colNames) {
+
+    for(int i = 0; i < table->numCols; i++) {
+        int nameFound = 0;
+        for(int j = 0; j < numCols; j++) {
+            if(strcmp(table->cols[i].name, getColNameFromAggregate(colNames[j])) == 0) {
+                nameFound = 1;
+                break;
+            }
+        }
+
+        if(nameFound) {
+            int numUniqueFound = 0;
+            int found;
+            if(table->cols[i].type == CHAR) {
+                printf("CHAR\n");
+                char** foundChars = NULL;
+
+                for(int j = 0; j < table->numRows; j++) {
+                    if(!table->cols[i].values[j].isNULL) {
+                        if(foundChars) {
+                            found = 0;
+                            for(int k = 0; k < numUniqueFound; k++) {
+                                if(strcmp(foundChars[k], table->cols[i].values[j].val.CHAR) == 0) {
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                numUniqueFound++;
+                                foundChars = realloc(foundChars, sizeof(char*) * numUniqueFound);
+                                foundChars[numUniqueFound - 1] = strdup(table->cols[i].values[j].val.CHAR);
+                            }
+                            else {
+                                deleteRow(table, j);
+                                j--;
+                            }
+                        }
+                        else {
+                            numUniqueFound++;
+                            foundChars = malloc(sizeof(char*));
+                            foundChars[numUniqueFound - 1] = strdup(table->cols[i].values[j].val.CHAR);
+                        }
+                    }
+                }
+            }
+            else if(table->cols[i].type == INTEGER) {
+                printf("INTEGER\n");
+
+                int* foundInts = NULL;
+
+                for(int j = 0; j < table->numRows; j++) {
+                    if(!table->cols[i].values[j].isNULL) {
+                        if(foundInts) {
+                            found = 0;
+                            for(int k = 0; k < numUniqueFound; k++) {
+                                if(foundInts[k] == table->cols[i].values[j].val.INTEGER) {
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                numUniqueFound++;
+                                foundInts = realloc(foundInts, sizeof(int) * numUniqueFound);
+                                foundInts[numUniqueFound - 1] = table->cols[i].values[j].val.INTEGER;
+                            }
+                            else {
+                                deleteRow(table, j);
+                                j--;
+                            }
+                        }
+                        else {
+                            numUniqueFound++;
+                            foundInts = malloc(sizeof(int));
+                            foundInts[numUniqueFound - 1] = table->cols[i].values[j].val.INTEGER;
+                        }
+                    }
+                }
+            }
+            else if(table->cols[i].type == DECIMAL) {
+                printf("DECIMAL\n");
+
+                double* foundDecs = NULL;
+
+                for(int j = 0; j < table->numRows; j++) {
+                    if(!table->cols[i].values[j].isNULL) {
+                        if(foundDecs) {
+                            found = 0;
+                            for(int k = 0; k < numUniqueFound; k++) {
+                                if(foundDecs[k] == table->cols[i].values[j].val.DECIMAL) {
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                numUniqueFound++;
+                                foundDecs = realloc(foundDecs, sizeof(double) * numUniqueFound);
+                                foundDecs[numUniqueFound - 1] = table->cols[i].values[j].val.DECIMAL;
+                            }
+                            else {
+                                deleteRow(table, j);
+                                j--;
+                            }
+                        }
+                        else {
+                            numUniqueFound++;
+                            foundDecs = malloc(sizeof(double));
+                            foundDecs[numUniqueFound - 1] = table->cols[i].values[j].val.DECIMAL;
+                        }
+                    }
+                }
+            }
+            else if(table->cols[i].type == BOOL) {
+                printf("BOOL\n");
+
+                int* foundBools = NULL;
+
+                for(int j = 0; j < table->numRows; j++) {
+                    if(!table->cols[i].values[j].isNULL) {
+                        if(foundBools) {
+                            found = 0;
+                            for(int k = 0; k < numUniqueFound; k++) {
+                                if(foundBools[k] == table->cols[i].values[j].val.BOOL) {
+                                    found = 1;
+                                    break;
+                                }
+                            }
+                            if(!found) {
+                                numUniqueFound++;
+                                foundBools = realloc(foundBools, sizeof(int) * numUniqueFound);
+                                foundBools[numUniqueFound - 1] = table->cols[i].values[j].val.BOOL;
+                            }
+                            else {
+                                deleteRow(table, j);
+                                j--;
+                            }
+                        }
+                        else {
+                            numUniqueFound++;
+                            foundBools = malloc(sizeof(int));
+                            foundBools[numUniqueFound - 1] = table->cols[i].values[j].val.BOOL;
+                        }
+                    }
+                }
+            }
+            else if(table->cols[i].type == DATE) {
+                printf("DATE datatypes functionality to be implemented.\n");
+            }
+        }
+
+    }
 
 }
 
@@ -1216,6 +1373,9 @@ char* getAggregateName(char* name) {
 
 char* getColNameFromAggregate(char* name) {
     char* colName;
+
+    if(!isAggregate(name))
+        return name;
 
     if(name != NULL && strchr(name, '('))
         colName = strchr(name, '(') + 1;

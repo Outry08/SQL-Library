@@ -81,7 +81,7 @@ typedef struct {
 
 typedef struct {
     int numCols;
-    char** colNames; //Can include SUM(col), COUNT(col), AVG(col), MIN(col), MAX(col), AS newCol
+    char** colNames; //Can include SUM(col), COUNT(col), AVG(col), MIN(col), MAX(col)
     char** orderByCols; //Can include ASC or DESC
     char** groupByCols;
     int distinct; //0 or 1
@@ -112,6 +112,7 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
+void deleteDuplicateValues(Table* table, int numCols, char** colNames);
 int getValIndex(Column col, void* value);
 void sortTableByCol(Table* table, char* colName, int ascending); //Implemented
 

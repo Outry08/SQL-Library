@@ -26,7 +26,8 @@ Execute the program with ./sql
 - Add ability to edit properties of columns (autoincrement, primary key, datatype, etc.).
 - Possibly add in settings to reduce repeated inputs in certain fields.
 - allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.
-- Prohibit name inputs with keyworks like COUNT or AVG or sqlite3_MASTER or *.
+- Prohibit name inputs with keyworks like 'COUNT' or 'AVG' or 'sqlite3_MASTER' or '*' or '.'
+- Add ellipses for printing of huge tables.
 - Add 'back' or 'cancel' option to nearly every stage of user input.
 - Potentially add ability to export to html to make a visual version of the table(s).
 - Valgrind and fix all leaks.
