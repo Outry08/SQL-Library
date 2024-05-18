@@ -67,16 +67,18 @@ int main(int argc, char const* argv[]) {
     where3.searchValue = "Mario";
     where3.comparison = "==";
 
-    Select select1 = newSelect(2, nameList(2, "Decimal Col", "Char Col"), NULL, NULL, 0);
+    Select select1 = newSelect(2, nameList(2, "Decimal Col", "Char Col"), 0);
 
     tables[1] = cql_select(tables[0], select1, 2, whereList(2, where5, where3), connectiveList(1, '|'));
 
-    Select select2 = newSelect(1, nameList(1, "Char Col"), NULL, NULL, 0);
+    Select select2 = newSelect(1, nameList(1, "Char Col"), 0);
     Where where9 = newWhere("Char Col", "=", "WAHHLUIGI");
 
     tables[1] = cql_select(tables[0], select2, 2, whereList(2, where3, where9), connectiveList(1, '|'));
 
     insertIntoRow(tables, 3, nameList(3, "Char Col", "Integer Col", "Decimal Col"), valueList(3, typeList(3, CHAR, INTEGER, DECIMAL), "Princess Peach", 777, 19.64), 3);
+
+    insertCol(&tables[0], "Bool Col", BOOL, 4, typeList(4, 0, 1, 2, 3), valueList(4, typeList(4, BOOL, BOOL, BOOL, BOOL), 1, 0, 0, 1));
 
     userTableOperator(2, tables);
 
@@ -633,22 +635,23 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     for(int i = 0; i < numCols; i++) {
         if(!isAggregate(colNames[i])) {
             newTable.cols[i] = copyColumn(baseTable.numRows, nameToCol(&baseTable, colNames[i], NULL));
-
             allAggs = 0;
         }
         else {
             char* colName = getColNameFromAggregate(colNames[i]);
 
             newTable.cols[i].values = malloc(sizeof(Value) * newTable.numRows);
-            newTable.cols[i].name = strdup(getAggregateName(colNames[i]));
+            newTable.cols[i].name = strdup(colNames[i]);
             newTable.cols[i].type = nameToCol(&baseTable, colName, NULL).type;
 
-            if(strcmp(newTable.cols[i].name, "COUNT") == 0) {
+            char* aggregateName = getAggregateName(colNames[i]);
+
+            if(strcmp(aggregateName, "COUNT") == 0) {
                 newTable.cols[i].type = INTEGER;
                 newTable.cols[i].values[0].val.INTEGER = newTable.numRows;
                 newTable.cols[i].values[0].isNULL = 0;
             }
-            else if(strcmp(newTable.cols[i].name, "AVG") == 0) {
+            else if(strcmp(aggregateName, "AVG") == 0) {
                 double avg = 0;
                 if(newTable.cols[i].type == DECIMAL) {
                     int count = 0;
@@ -675,7 +678,6 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
                     int sum = 0;
                     for(int j = 0; j < newTable.numRows; j++) {
                         if(!nameToCol(&baseTable, colName, NULL).values[j].isNULL) {
-                            printf("YEE HAW\n");
                             sum += nameToCol(&baseTable, colName, NULL).values[j].val.INTEGER;
                             count++;
                         }
@@ -690,7 +692,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
                 }
 
             }
-            else if(strcmp(newTable.cols[i].name, "SUM") == 0) {
+            else if(strcmp(aggregateName, "SUM") == 0) {
                 if(newTable.cols[i].type == DECIMAL) {
                     double sum = 0;
                     for(int j = 0; j < newTable.numRows; j++)
@@ -711,7 +713,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
                     newTable.cols[i].values[0].isNULL = 1;
                 }
             }
-            else if(strcmp(newTable.cols[i].name, "MAX") == 0) {
+            else if(strcmp(aggregateName, "MAX") == 0) {
                 if(newTable.cols[i].type == DECIMAL) {
                     double max = __DBL_MIN__;
                     for(int j = 0; j < newTable.numRows; j++)
@@ -745,7 +747,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
                     newTable.cols[i].values[0].isNULL = 1;
                 }
             }
-            else if(strcmp(newTable.cols[i].name, "MIN") == 0) {
+            else if(strcmp(aggregateName, "MIN") == 0) {
                 if(newTable.cols[i].type == DECIMAL) {
                     double min = __DBL_MAX__;
                     for(int j = 0; j < newTable.numRows; j++)
@@ -1372,13 +1374,13 @@ char* getAggregateName(char* name) {
 }
 
 char* getColNameFromAggregate(char* name) {
-    char* colName;
+    char* colName = malloc(sizeof(char) * MAX_LEN);
 
     if(!isAggregate(name))
         return name;
 
     if(name != NULL && strchr(name, '('))
-        colName = strchr(name, '(') + 1;
+        strcpy(colName, strchr(name, '(') + 1);
     else
         return NULL;
 
@@ -1388,6 +1390,8 @@ char* getColNameFromAggregate(char* name) {
             break;
         }
     }
+
+    colName = realloc(colName, sizeof(char) * (strlen(colName) + 1));
 
     return colName;
 }
@@ -1401,7 +1405,7 @@ Where newWhere(char* searchColName, char* comparison, void* searchValue) {
 
     return newWhere;
 }
-Select newSelect(int numCols, char** colNames, char** orderByCols, char** groupByCols, int distinct) {
+Select newSelect(int numCols, char** colNames, int distinct) {
     Select select;
 
     if(numCols < 0)
@@ -1409,8 +1413,6 @@ Select newSelect(int numCols, char** colNames, char** orderByCols, char** groupB
     else
         select.numCols = numCols;
     select.colNames = colNames;
-    select.orderByCols = orderByCols;
-    select.groupByCols = groupByCols;
     select.distinct = distinct;
 
     return select;

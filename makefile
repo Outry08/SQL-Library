@@ -1,10 +1,10 @@
 CC = gcc
 CFLAGS = -std=c99 -Wall -pedantic
 
-all : sql
+all : cql
 
-sql : sqllib.c sqllib.h
-	$(CC) $(CFLAGS) sqllib.c -o sql -lsqlite3
+cql : sqllib.c sqllib.h
+	$(CC) $(CFLAGS) sqllib.c -o cql -lsqlite3
 
 clean:
-	- rm *.o sql
+	- rm *.o cql

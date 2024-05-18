@@ -82,8 +82,7 @@ typedef struct {
 typedef struct {
     int numCols;
     char** colNames; //Can include SUM(col), COUNT(col), AVG(col), MIN(col), MAX(col)
-    char** orderByCols; //Can include ASC or DESC
-    char** groupByCols;
+    // char** groupByCols;
     int distinct; //0 or 1
 } Select;
 
@@ -198,7 +197,7 @@ Table* userTableOperator(int numTables, Table* tables);
  * Struct and List Constructors
 **/
 Where newWhere(char* searchColName, char* comparison, void* searchValue); //Implemented
-Select newSelect(int numCols, char** colNames, char** orderByCols, char** groupByCols, int distinct); //Implemented
+Select newSelect(int numCols, char** colNames, int distinct); //Implemented
 char** nameList(int numNames, ...); //Implemented
 int* typeList(int numTypes, ...); //Implemented
 void** valueList(int numValues, int* types, ...); //Implemented
