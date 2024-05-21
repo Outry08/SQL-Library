@@ -16,12 +16,10 @@ Execute the program with ./cql
 ## Roadmap
 
 - Incorporate column properties such as autoincrement, not null, primary key, and foreign key.
-    - Look into adding support for CHECK property.
     - Add ability to edit properties of columns (autoincrement, primary key, datatype, etc.).
+    - Add attribute adherence checks when inserting and updating.
 - Group By in select statements.
 - Expand select statements to be able to refer to other tables. (Including adding join statements).
-
-- Add DATE datatype functionality.
 
 - Add the ability to input '*' to indicate 'all' in many user input places.
 - Allow user to type NULL for where condition of ANY datatype.
@@ -36,6 +34,10 @@ Execute the program with ./cql
 - COMPLETE.
 
 ## Potential Additions At A Later Date
+- Multi-layered Sorting.
+- Adding CHECK attribute to columns.
+- Adding DATE datatype support.
+- Adding BLOB datatype support.
 
 ## Project status
 Ongoing.

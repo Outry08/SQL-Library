@@ -53,12 +53,12 @@ typedef struct {
     Value* values;
     char* name;
     TypeEnum type;
-    // int notNull; //0 or 1 //take user input along with column name, ask for '-nn' right after the name.
-    // int primaryKey; //0 or 1 //take user input along with column name, ask for '-p' right after the name.
-    // int foreignKey; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
-    // Column* foreignKey; //take user input along with column name, ask for '-f' right after the name.
-    // Value defaultValue; 
-    // int default; //0 or 1 //If a default value has been provided.
+    int notNull; //0 or 1 //take user input along with column name.
+    int isPrimaryKey; //0 or 1 //take user input along with column name
+    int hasForeignKey; //0 or 1 //take user input along with column name.
+    char* foreignKeyName; //take user input along with column name.
+    Value defaultValue;
+    int autoIncrement;
 } Column;
 
 typedef struct {
@@ -89,7 +89,7 @@ typedef struct {
 **/
 //Primary Keys, Foreign Keys, NOT NULL, and AUTOINCREMENT are something yet to be added.
 //Primary keys use hashtables in SQL, so could do that here too.
-Table create(char* tableName, int numCols, char** colNames, int* colTypes); //Implemented
+Table create(char* tableName, int numCols, char** colNames, int* colTypes, char** colAttrs, void** defaultValues, char** foreignKeyNames); //Implemented
 
 Table cql_select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
@@ -105,8 +105,8 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemen
 **/
 void chackDupNames(Table* tableList);
 void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum); //Implemented
-void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values); //Implemented
-void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colPos); //Implemented
+void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName); //Implemented
+void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
 void deleteDuplicateValues(Table* table, int numCols, char** colNames);
@@ -142,13 +142,15 @@ void printColumn(Column col, int numValues); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
 
+void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName, int numRows);
+
 int* actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
 int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
-int colAttrInput(void);
+char* colAttrInput(int colType, void** defaultVal, char** foreignKeyName); //Implemented
 void printType(int type); //Implemented
 char* typeToString(int type); //Implemented
 int stringToType(char* type); //Implemented
