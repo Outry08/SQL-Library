@@ -510,7 +510,7 @@ void freeTable(Table* table) {
     for(int i = 0; i < table->numCols; i++) {
         if(table->cols[i].type == CHAR)
             for(int j = 0; j < table->numRows; j++)
-                if(table->cols[i].values[j].val.CHAR != NULL)
+                if(!table->cols[i].values[j].isNULL && table->cols[i].values[j].val.CHAR != NULL)
                     free(table->cols[i].values[j].val.CHAR);
         free(table->cols[i].values);
         free(table->cols[i].name);
@@ -1545,36 +1545,47 @@ void printTable(Table table) {
     printf("|");
 
     for(int i = 0; i < table.numRows; i++) {
-        printSeparatorLine(table.numCols, i + 1);
-        for(int j = 0; j < table.numCols; j++) {
-            if(table.cols[j].values[i].isNULL == 1)
-                sprintf(printString, "NULL");
 
-            else if(table.cols[j].type == CHAR) {
-                sprintf(printString, "%s", table.cols[j].values[i].val.CHAR);
-                if(strlen(printString) > 18) {
-                    printString[18] = '\0';
-                    printString[17] = ' ';
-                    printString[16] = '.';
-                    printString[15] = '.';
-                    printString[14] = '.';
+        if(i <= 9 || table.numRows - i <= 9) {
+            printSeparatorLine(table.numCols, i + 1);
+            for(int j = 0; j < table.numCols; j++) {
+                if(table.cols[j].values[i].isNULL == 1)
+                    sprintf(printString, "NULL");
+
+                else if(table.cols[j].type == CHAR) {
+                    sprintf(printString, "%s", table.cols[j].values[i].val.CHAR);
+                    if(strlen(printString) > 18) {
+                        printString[18] = '\0';
+                        printString[17] = ' ';
+                        printString[16] = '.';
+                        printString[15] = '.';
+                        printString[14] = '.';
+                    }
                 }
+                else if(table.cols[j].type == INTEGER)
+                    sprintf(printString, "%d", table.cols[j].values[i].val.INTEGER);
+                else if(table.cols[j].type == DECIMAL)
+                    sprintf(printString, "%.3lf", table.cols[j].values[i].val.DECIMAL);
+                else if(table.cols[j].type == BOOL) {
+                    if(table.cols[j].values[i].val.BOOL == 1)
+                        sprintf(printString, "TRUE");
+                    else
+                        sprintf(printString, "FALSE");
+                }
+                else if(table.cols[j].type == DATE)
+                    sprintf(printString, "DATE");
+                printf("| %-*s ", colWidth - 3, printString);
             }
-            else if(table.cols[j].type == INTEGER)
-                sprintf(printString, "%d", table.cols[j].values[i].val.INTEGER);
-            else if(table.cols[j].type == DECIMAL)
-                sprintf(printString, "%.3lf", table.cols[j].values[i].val.DECIMAL);
-            else if(table.cols[j].type == BOOL) {
-                if(table.cols[j].values[i].val.BOOL == 1)
-                    sprintf(printString, "TRUE");
-                else
-                    sprintf(printString, "FALSE");
-            }
-            else if(table.cols[j].type == DATE)
-                sprintf(printString, "DATE");
-            printf("| %-*s ", colWidth - 3, printString);
+            printf("|");
         }
-        printf("|");
+        else if(i == 10) {
+            printSeparatorLine(table.numCols, 0);
+            printf("\n\t");
+            for(int i = 0; i < table.numCols * 23 + 1; i++) {
+                printf(".");
+            }
+            printf("\n");
+        }
     }
 
     printSeparatorLine(table.numCols, 0);
@@ -1596,6 +1607,8 @@ void printSeparatorLine(int numCols, int rowNum) {
 }
 
 void printRow(Table table, int rowIndex) {
+
+    printf("YEET\n");
 
     printf("\t");
     for(int i = 0; i < table.numCols; i++) {
@@ -1978,13 +1991,16 @@ Table* importTable(char* tableName, char* filename) {
             *value = strdup(tableName);
             sqlite3_exec(db, sql, callbackCreateTable, value, errMessage);
 
+            printTable(*((Table*)(*value)));
+
             table = malloc(sizeof(Table));
             memcpy(table, (Table*)(*value), sizeof(Table));
 
             printTable(*table);
 
-            strcpy(sql, "SELECT sql FROM SQLITE_MASTER WHERE Name = ");
-            strcat(sql, "'My Table'");
+            strcpy(sql, "SELECT sql FROM SQLITE_MASTER WHERE Name = '");
+            strcat(sql, tableName);
+            strcat(sql, "'");
             sqlite3_exec(db, sql, callbackGetAttributes, table, errMessage);
 
             strcpy(sql, "SELECT * FROM ");
@@ -2015,11 +2031,16 @@ Table* importTable(char* tableName, char* filename) {
             int inserting = 0;
 
             char line[1000];
-            char* createCmd = malloc(sizeof(char) * 10000);
+            char* createCmd = NULL;
+            char** insertCmds = malloc(sizeof(char*));
+
+            int numInserts = 0;
 
             //LIMITATION: CREATE AND INSERT COMMANDS MUST BE ON SEPARATE LINES OF GIVEN FILE. FIX IN THE FUTURE!
             while(fgets(line, 1000, fp)) {
-                printf("%s\n", createCmd);
+                // printf("%s\n", createCmd);
+
+                printf("%d ", numInserts);
 
                 if(!creating && strstr(line, tableCreateLine)) {
                     creating = 1;
@@ -2027,34 +2048,74 @@ Table* importTable(char* tableName, char* filename) {
                 if(creating) {
                     if(strstr(line, ";")) {
                         char* lineCopy = strdup(line);
-                        strcat(createCmd, strtok(lineCopy, ";"));
+                        if(!createCmd) {
+                            createCmd = malloc(1000);
+                            strcpy(createCmd, strtok(lineCopy, ";"));
+                        }
+                        else {
+                            createCmd = realloc(createCmd, strlen(createCmd + 1000));
+                            strcat(createCmd, lineCopy);
+                        }
                         strcat(createCmd, ";\n");
                         creating = 0;
                         free(lineCopy);
                     }
-                    else
-                        strcat(createCmd, line);
+                    else {
+                        if(!createCmd) {
+                            createCmd = malloc(1000);
+                            strcpy(createCmd, line);
+                        }
+                        else {
+                            createCmd = realloc(createCmd, strlen(createCmd + 1000));
+                            strcat(createCmd, line);
+                        }
+                    }
                     printf("LINE: %s\n", line);
                 }
                 if(!inserting && strstr(line, rowInsertLine)) {
-                    printf("LINE: %s\n", strstr(line, rowInsertLine));
+                    // printf("LINE: %s\n", strstr(line, rowInsertLine));
                     inserting = 1;
+                    numInserts++;
+                    if(numInserts > 1)
+                        insertCmds = realloc(insertCmds, sizeof(char*) * numInserts);
+                    insertCmds[numInserts - 1] = malloc(1000);
+                    strcpy(insertCmds[numInserts - 1], "");
                 }
                 if(inserting) {
+
+                    if(!insertCmds[numInserts - 1]) {
+                        insertCmds[numInserts - 1] = malloc(1000);
+                        strcpy(insertCmds[numInserts - 1], "");
+                    }
+                    else
+                        insertCmds[numInserts - 1] = realloc(insertCmds[numInserts - 1], strlen(insertCmds[numInserts - 1]) + 1000);
+
                     if(strstr(line, ";")) {
+
                         char* lineCopy = strdup(line);
-                        strcat(createCmd, strtok(lineCopy, ";"));
-                        strcat(createCmd, ";\n");
+                        strcat(insertCmds[numInserts - 1], strtok(lineCopy, ";"));
+                        strcat(insertCmds[numInserts - 1], ";\n");
                         inserting = 0;
                         free(lineCopy);
                     }
                     else
-                        strcat(createCmd, line);
+                        strcat(insertCmds[numInserts - 1], line);
                 }
             }
             fclose(fp);
 
-            printf("%s\n", createCmd);
+            char* sql = malloc(1000 * numInserts + strlen(createCmd));
+            strcpy(sql, createCmd);
+            free(createCmd);
+            for(int i = 0; i < numInserts; i++) {
+                printf("%d ", i);
+                strcat(sql, insertCmds[i]);
+                free(insertCmds[i]);
+            }
+
+            free(insertCmds);
+
+            printf("%s\n", sql);
             sqlite3* db;
             char** errMessage = malloc(sizeof(char*));
             *errMessage = strdup("Error: SQL Execution Failed");
@@ -2062,10 +2123,10 @@ Table* importTable(char* tableName, char* filename) {
             truncate("load.db", 0);
 
             sqlite3_open("load.db", &db);
-            sqlite3_exec(db, createCmd, NULL, NULL, errMessage);
+            sqlite3_exec(db, sql, NULL, NULL, errMessage);
             sqlite3_close(db);
             free(errMessage);
-            free(createCmd);
+            free(sql);
 
             table = importTable(tableName, "load.db");
 
@@ -2113,12 +2174,14 @@ int importDatabase(char* filename, Table** tables) {
                 tables = malloc(sizeof(Table*));
 
             for(int i = 0; i < numTables; i++) {
-                if(i == 0)
-                    *tables = malloc(sizeof(Table));
-                else
-                    *tables = realloc(*tables, sizeof(Table) * (i + 1));
+                if(strcmp(names->names[i], "sqlite_sequence")) {
+                    if(i == 0)
+                        *tables = malloc(sizeof(Table));
+                    else
+                        *tables = realloc(*tables, sizeof(Table) * (i + 1));
 
-                (*tables)[i] = *importTable(names->names[i], filename);
+                    (*tables)[i] = *importTable(names->names[i], filename);
+                }
             }
         }
         else {
@@ -2133,12 +2196,19 @@ int importDatabase(char* filename, Table** tables) {
 
         FILE* fp = fopen(filename, "r");
         if(fp) {
+
+            //Don't make this a static size no more
             char* sql = malloc(sizeof(char) * 10000);
             char line[1000];
+            int numLines = 0;
             strcpy(sql, "");
 
-            while(fgets(line, 1000, fp))
+            while(fgets(line, 1000, fp)) {
+                numLines++;
+                if(numLines > 10)
+                    sql = realloc(sql, (numLines + 10) * 1000);
                 strcat(sql, line);
+            }
 
             printf("%s\n", sql);
             sqlite3* db;
@@ -2166,74 +2236,110 @@ int importDatabase(char* filename, Table** tables) {
 
 void exportTable(Table table, char* filename, int trunc) {
 
-    char* sql = malloc(sizeof(char) * 1000);
+    printf("EXPORTIE\n");
 
-    strcpy(sql, "CREATE TABLE ");
+
+
     char* tableName = addQuotesToString(table.name);
 
-    strcat(sql, tableName);
+    printf("1\n");
 
+    char* sql = malloc(16 + strlen(tableName) + (MAX_LEN + 15) * table.numCols);
+    strcpy(sql, "CREATE TABLE ");
+    strcat(sql, tableName);
     strcat(sql, "(");
 
     char* colName;
     for(int i = 0; i < table.numCols; i++) {
+
+        // sql = realloc(sql, strlen(sql) + MAX_LEN + 15);
+
         colName = addQuotesToString(table.cols[i].name);
+        // sql = realloc(sql, strlen(sql) + strlen(colName) + 2);
         strcat(sql, colName);
         strcat(sql, " ");
 
-        if(table.cols[i].type != BOOL)
+        if(table.cols[i].type != BOOL) {
+            // sql = realloc(sql, strlen(sql) + strlen(typeToString(table.cols[i].type)) + 1);
             strcat(sql, typeToString(table.cols[i].type));
-        else
+        }
+        else {
+            // sql = realloc(sql, strlen(sql) + strlen("BIT") + 1);
             strcat(sql, "BIT");
+        }
 
-        if(i < table.numCols - 1)
+        if(i < table.numCols - 1) {
+            // sql = realloc(sql, strlen(sql) + 3);
             strcat(sql, ", ");
+        }
 
         free(colName);
     }
 
+    // sql = realloc(sql, strlen(sql) + 4);
     strcat(sql, ");\n");
 
+    char** insertSQL = malloc(sizeof(char*) * table.numRows);
+
     for(int i = 0; i < table.numRows; i++) {
-        strcat(sql, "INSERT INTO ");
-        strcat(sql, tableName);
-        strcat(sql, "(");
+
+        insertSQL[i] = malloc(table.numCols * MAX_LEN * 2 + MAX_LEN);
+        strcpy(insertSQL[i], "");
+
+        printf("%d ", i);
+
+        // sql = realloc(sql, strlen(sql) + table.numCols * MAX_LEN * 2 + 50);
+        strcat(insertSQL[i], "INSERT INTO ");
+        strcat(insertSQL[i], tableName);
+        strcat(insertSQL[i], "(");
 
         for(int j = 0; j < table.numCols; j++) {
+            printf(" %d ", j);
             colName = addQuotesToString(table.cols[j].name);
-            strcat(sql, colName);
-            if(j < table.numCols - 1)
-                strcat(sql, ", ");
+            // sql = realloc(sql, strlen(sql) + strlen(colName) + 1);
+            strcat(insertSQL[i], colName);
+            if(j < table.numCols - 1) {
+                // sql = realloc(sql, strlen(sql) + 3);
+                strcat(insertSQL[i], ", ");
+            }
 
             free(colName);
         }
 
-        strcat(sql, ")\n");
+        printf("VALUES\n");
+        // sql = realloc(sql, strlen(sql) + 11);
+        strcat(insertSQL[i], ")\n");
+        strcat(insertSQL[i], "VALUES(");
 
-        strcat(sql, "VALUES(");
         for(int j = 0; j < table.numCols; j++) {
+            printf(" %d ", j);
             if(table.cols[j].values[i].isNULL) {
-                strcat(sql, "NULL");
+                // sql = realloc(sql, strlen(sql) + 5);
+                strcat(insertSQL[i], "NULL");
             }
             else if(table.cols[j].type == INTEGER) {
                 char intString[MAX_LEN];
                 sprintf(intString, "%d", table.cols[j].values[i].val.INTEGER);
-                strcat(sql, intString);
+                // sql = realloc(sql, strlen(sql) + strlen(intString) + 1);
+                strcat(insertSQL[i], intString);
             }
             else if(table.cols[j].type == DECIMAL) {
                 char decString[MAX_LEN];
                 sprintf(decString, "%lf", table.cols[j].values[i].val.DECIMAL);
-                strcat(sql, decString);
+                // sql = realloc(sql, strlen(sql) + strlen(decString) + 1);
+                strcat(insertSQL[i], decString);
             }
             else if(table.cols[j].type == CHAR) {
                 char chrString[MAX_LEN];
                 sprintf(chrString, "'%s'", table.cols[j].values[i].val.CHAR);
-                strcat(sql, chrString);
+                // sql = realloc(sql, strlen(sql) + strlen(chrString) + 1);
+                strcat(insertSQL[i], chrString);
             }
             else if(table.cols[j].type == BOOL) {
                 char boolString[MAX_LEN];
                 sprintf(boolString, "%d", table.cols[j].values[i].val.BOOL);
-                strcat(sql, boolString);
+                // sql = realloc(sql, strlen(sql) + strlen(boolString) + 1);
+                strcat(insertSQL[i], boolString);
                 // if(table.cols[j].values[i].val.BOOL == 1)
                 //     strcat(sql, "TRUE");
                 // else
@@ -2242,20 +2348,37 @@ void exportTable(Table table, char* filename, int trunc) {
             else if(table.cols[j].type == DATE) {
                 printf("DATE datatype functionality coming soon.\n");
             }
-            if(j < table.numCols - 1)
-                strcat(sql, ", ");
+            if(j < table.numCols - 1) {
+                // sql = realloc(sql, strlen(sql) + 3);
+                strcat(insertSQL[i], ", ");
+            }
         }
 
-        strcat(sql, ");\n");
+        // sql = realloc(sql, strlen(sql) + 4);
+
+        strcat(insertSQL[i], ");\n");
 
     }
 
-    strcat(sql, "\n");
+    printf("I DID IT\n");
+
+    sql = realloc(sql, strlen(sql) + (strlen(insertSQL[0]) * table.numRows) * 2);
+    for(int i = 0; i < table.numRows; i++) {
+        printf("%d ", i);
+        strcat(sql, insertSQL[i]);
+    }
+
+    printf("TRUNCING\n");
 
     if(trunc)
         truncate(filename, 0);
 
+    printf("Trunc Done\n");
+
     if(endsWith(filename, ".db")) {
+
+        printf(".DB\n");
+
         sqlite3* db;
         char** errMessage = malloc(sizeof(char*));
         *errMessage = strdup("Error: SQL Execution Failed");
@@ -2274,6 +2397,8 @@ void exportTable(Table table, char* filename, int trunc) {
     }
     else {
 
+        printf("NO .DB\n");
+
         FILE* fp = fopen(filename, "r");
         if(fp) {
             char* tableCreateLine = malloc(sizeof(char) * 1000);
@@ -2281,6 +2406,11 @@ void exportTable(Table table, char* filename, int trunc) {
             strcat(tableCreateLine, tableName);
 
             int tableExists = 0;
+
+            char** lines;
+            int numLines = 0;
+
+            //This is very inefficient. Make it better.
 
             char line[1000];
             while(fgets(line, 1000, fp)) {
@@ -2294,9 +2424,21 @@ void exportTable(Table table, char* filename, int trunc) {
                     tableExists = 0;
                 }
                 if(!tableExists) {
-                    strcat(sql, line);
+                    numLines++;
+                    if(numLines == 1)
+                        lines = malloc(sizeof(char*));
+                    else
+                        lines = realloc(lines, sizeof(char*) * numLines);
+                    lines[numLines - 1] = strdup(line);
                 }
             }
+
+            sql = realloc(sql, strlen(sql) + 1000 * numLines);
+
+            for(int i = 0; i < numLines; i++) {
+                strcat(sql, lines[i]);
+            }
+
         }
         fclose(fp);
         fp = fopen(filename, "w");
@@ -2335,26 +2477,26 @@ int callbackCreateTable(void* value, int numCols, char** values, char** colNames
 int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
 
-    printf("INSERT TIME\n");
+    // printf("INSERT TIME\n");
 
     for(int i = 0; i < numCols; i++) {
         Column currCol = nameToCol(table, colNames[i], NULL);
 
         if(values[i] != NULL) {
             if(currCol.type == INTEGER) {
-                printf("INTEGER\n");
+                // printf("INTEGER\n");
                 int* intVal = malloc(sizeof(int));
                 sscanf(values[i], "%d", intVal);
                 values[i] = (void*)intVal;
             }
             else if(currCol.type == DECIMAL) {
-                printf("DECIMAL\n");
+                // printf("DECIMAL\n");
                 double* decVal = malloc(sizeof(double));
                 sscanf(values[i], "%lf", decVal);
                 values[i] = (void*)decVal;
             }
             else if(currCol.type == BOOL) {
-                printf("BOOL\n");
+                // printf("BOOL\n");
                 int* boolVal = malloc(sizeof(int));
                 sscanf(values[i], "%d", boolVal);
                 values[i] = (void*)boolVal;
@@ -2363,14 +2505,20 @@ int callbackInsertData(void* value, int numCols, char** values, char** colNames)
                 // else
                 //     *boolVal = 0;
             }
-            else if(currCol.type == DATE) {
-                printf("DATE datatype functionality coming soon.\n");
+            else if(currCol.type == CHAR) {
+                // printf("CHAR %s\n", values[i]);
             }
+            else if(currCol.type == DATE) {
+                // printf("DATE datatype functionality coming soon.\n");
+            }
+        }
+        else {
+            // printf("NULL\n");
         }
     }
     insertRow(table, numCols, colNames, (void**)values);
 
-    printf("DONE INSERTING\n");
+    // printf("DONE INSERTING\n");
     return 0;
 }
 
@@ -2379,12 +2527,15 @@ int callbackGetTableNames(void* value, int numCols, char** values, char** colNam
         char** names;
         int numNames;
     };
-    if(++(((struct TableNames*)value)->numNames) == 1)
-        ((struct TableNames*)value)->names = malloc(sizeof(char*));
-    else
-        ((struct TableNames*)value)->names = realloc(((struct TableNames*)value)->names, sizeof(char*) * ((struct TableNames*)value)->numNames);
 
-    ((struct TableNames*)value)->names[((struct TableNames*)value)->numNames - 1] = strdup(values[0]);
+    if(strcmp(values[0], "sqlite_sequence")) {
+        if(++(((struct TableNames*)value)->numNames) == 1)
+            ((struct TableNames*)value)->names = malloc(sizeof(char*));
+        else
+            ((struct TableNames*)value)->names = realloc(((struct TableNames*)value)->names, sizeof(char*) * ((struct TableNames*)value)->numNames);
+
+        ((struct TableNames*)value)->names[((struct TableNames*)value)->numNames - 1] = strdup(values[0]);
+    }
 
     return 0;
 }
@@ -2393,7 +2544,14 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
     Table* table = ((Table*)value);
     char* currCol = malloc(sizeof(char) * (strlen(values[0]) + 1));
 
+    printf("YEETUS: %s\n", values[0]);
+
+    printf("%p\n", table);
+
+    printTable(*table);
+
     for(int i = 0; i < table->numCols; i++) {
+        printf("HELP\n");
         printf("%s\n", table->cols[i].name);
         strcpy(currCol, strstr(values[0], addQuotesToString(table->cols[i].name)));
         printf("%s\n", currCol);
@@ -4784,6 +4942,23 @@ int rowNumInput(int** rowNums, int numRows) {
     free(rowString);
 
     return numRowsChosen;
+}
+
+int colAttrInput(void) {
+    int input;
+
+    printf("1. Auto Increment\n"
+        "2. Not NULL\n"
+        "3. Primary Key\n"
+        "4. Foreign Key\n"
+        "Choice: ");
+    do {
+        scanfWell("%d", &input);
+        if(--input < 0 || input > 3)
+            printf("Please input a number between 1 & 4: ");
+    } while(input < 0 || input > 3);
+
+    return input;
 }
 
 void printType(int type) {

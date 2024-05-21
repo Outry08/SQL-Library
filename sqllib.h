@@ -57,9 +57,7 @@ typedef struct {
     // int primaryKey; //0 or 1 //take user input along with column name, ask for '-p' right after the name.
     // int foreignKey; //0 or 1 //take user input along with column name, ask for '-f' right after the name.
     // Column* foreignKey; //take user input along with column name, ask for '-f' right after the name.
-    // int chainedKey; //0 or 1 //the pointer is shared among multiple tables so that simultaneous updates aren't needed.
     // Value defaultValue; 
-    // int unique; //0 or 1 //If duplicate values are allowed or not.
     // int default; //0 or 1 //If a default value has been provided.
 } Column;
 
@@ -150,6 +148,7 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList); /
 int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
+int colAttrInput(void);
 void printType(int type); //Implemented
 char* typeToString(int type); //Implemented
 int stringToType(char* type); //Implemented
