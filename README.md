@@ -18,6 +18,8 @@ Execute the program with ./cql
 - Incorporate column properties such as autoincrement, not null, primary key, and foreign key.
     - Add ability to edit properties of columns (autoincrement, primary key, datatype, etc.).
     - Add attribute adherence checks when inserting and updating.
+    - sqlite_sequence table for autoincrement.
+    - Properly import and export column attributes.
 - Group By in select statements.
 - Expand select statements to be able to refer to other tables. (Including adding join statements).
 
@@ -38,6 +40,10 @@ Execute the program with ./cql
 - Adding CHECK attribute to columns.
 - Adding DATE datatype support.
 - Adding BLOB datatype support.
+
+## Limitations
+- Upon importing SQL instructions, they cannot be all on one line.
+- Program is slow with larger tables.
 
 ## Project status
 Ongoing.

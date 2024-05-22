@@ -109,7 +109,8 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
-void deleteDuplicateValues(Table* table, int numCols, char** colNames);
+void deleteDuplicateValues(Column* col, int numRows); //Implemented
+void deleteDuplicateValRows(Table* table, int numCols, char** colNames); //Implemented
 int getValIndex(Column col, void* value);
 void sortTableByCol(Table* table, char* colName, int ascending); //Implemented
 
@@ -142,6 +143,7 @@ void printColumn(Column col, int numValues); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
 
+void initColAttrs(Column* col); //Implemented
 void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName, int numRows);
 
 int* actionMenu(Table* table); //Implemented
@@ -150,7 +152,8 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList); /
 int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
-char* colAttrInput(int colType, void** defaultVal, char** foreignKeyName); //Implemented
+void colAttrInput(Column* col, int numRows); //Implemented
+char* typeAttrInput(int colType, void** defaultVal, char** foreignKeyName); //Implemented
 void printType(int type); //Implemented
 char* typeToString(int type); //Implemented
 int stringToType(char* type); //Implemented
