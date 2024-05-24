@@ -16,9 +16,7 @@ Execute the program with ./cql
 ## Roadmap
 
 - Incorporate column properties such as autoincrement, not null, primary key, and foreign key.
-    - Add ability to edit properties of columns (autoincrement, primary key, datatype, etc.).
-    - Add attribute adherence checks when inserting and updating.
-    - sqlite_sequence table for autoincrement.
+    - Add ability to edit properties of columns (Datatype, Default value, Foreign Key String).
     - Properly import and export column attributes.
 - Group By in select statements.
 - Expand select statements to be able to refer to other tables. (Including adding join statements).
@@ -40,6 +38,9 @@ Execute the program with ./cql
 - Adding CHECK attribute to columns.
 - Adding DATE datatype support.
 - Adding BLOB datatype support.
+- More in-depth auto increment settings.
+- Foreign Key functionality instead of just recording.
+- Undo feature.
 
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.
