@@ -152,9 +152,11 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList); /
 int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
-void colAttrInput(Column* col, int numRows); //Implemented
-char* typeAttrInput(int colType, void** defaultVal, char** foreignKeyName); //Implemented
+void attrInputByCol(Column* col, int numRows); //Implemented
+char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName); //Implemented
+int changeColType(Column* col, int newType, int numRows); //Implemented
 void printType(int type); //Implemented
+void printValue(void* value, int type); //Implemented
 char* typeToString(int type); //Implemented
 int stringToType(char* type); //Implemented
 int endsWith(char* str, char* ext); //Implemented

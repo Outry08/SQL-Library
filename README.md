@@ -15,12 +15,6 @@ Execute the program with ./cql
 
 ## Roadmap
 
-- Incorporate column properties such as autoincrement, not null, primary key, and foreign key.
-    - Add ability to edit properties of columns (Datatype, Default value, Foreign Key String).
-    - Properly import and export column attributes.
-- Group By in select statements.
-- Expand select statements to be able to refer to other tables. (Including adding join statements).
-
 - Add the ability to input '*' to indicate 'all' in many user input places.
 - Allow user to type NULL for where condition of ANY datatype.
 - Allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.
@@ -34,17 +28,21 @@ Execute the program with ./cql
 - COMPLETE.
 
 ## Potential Additions At A Later Date
+
+- Group By in select statements.
+- Expand select statements to be able to refer to other tables. (Including adding join statements).
 - Multi-layered Sorting.
 - Adding CHECK attribute to columns.
 - Adding DATE datatype support.
 - Adding BLOB datatype support.
 - More in-depth auto increment settings.
-- Foreign Key functionality instead of just recording.
+- Foreign Key functionality.
 - Undo feature.
 
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.
 - Program is slow with larger tables.
+- Foreign Keys not validated or funcionally incorporated.
 
 ## Project status
 Ongoing.
