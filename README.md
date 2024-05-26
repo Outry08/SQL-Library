@@ -15,6 +15,8 @@ Execute the program with ./cql
 
 ## Roadmap
 
+- Add column array address storer to column struct to be used for foreign keys.
+
 - Add the ability to input '*' to indicate 'all' in many user input places.
 - Allow user to type NULL for where condition of ANY datatype.
 - Allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.

@@ -2915,17 +2915,17 @@ void exportTable(Table table, char* filename, int trunc) {
         }
         if(table.cols[i].isPrimaryKey)
             strcat(sql, " PRIMARY KEY");
-        // if(table.cols[i].hasForeignKey) {
-        //     strcat(sql, " REFERENCES ");
-        //     char tableName[MAX_LEN];
-        //     strcpy(tableName, table.cols[i].foreignKeyName);
-        //     *strchr(tableName, '.') = '\0';
-        //     strcpy(tableName, addQuotesToString(tableName));
-        //     strcat(sql, tableName);
-        //     strcat(sql, "(");
-        //     strcat(sql, addQuotesToString(strchr(table.cols[i].foreignKeyName, '.') + 1));
-        //     strcat(sql, ")");
-        // }
+        if(table.cols[i].hasForeignKey) {
+            strcat(sql, " REFERENCES ");
+            char tableName[MAX_LEN];
+            strcpy(tableName, table.cols[i].foreignKeyName);
+            *strchr(tableName, '.') = '\0';
+            strcpy(tableName, addQuotesToString(tableName));
+            strcat(sql, tableName);
+            strcat(sql, "(");
+            strcat(sql, addQuotesToString(strchr(table.cols[i].foreignKeyName, '.') + 1));
+            strcat(sql, ")");
+        }
         if(table.cols[i].notNull)
             strcat(sql, " NOT NULL");
 
@@ -3203,7 +3203,7 @@ int callbackGetTableNames(void* value, int numCols, char** values, char** colNam
 
 int callbackGetAttributes(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
-    char* currCol = malloc(sizeof(char) * (strlen(values[0]) + 1));
+    char* currCol = malloc(sizeof(char) * (strlen(values[0]) + MAX_LEN));
 
     printf("YEETUS: %s\n", values[0]);
 
@@ -3212,9 +3212,31 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
     for(int i = 0; i < table->numCols; i++) {
         printf("HELP\n");
         printf("%s\n", table->cols[i].name);
-        strcpy(currCol, strstr(values[0], addQuotesToString(table->cols[i].name)));
+        char nameCheck[MAX_LEN];
+        char* temp;
+        strcpy(nameCheck, ", ");
+        strcat(nameCheck, addQuotesToString(table->cols[i].name));
+        temp = strstr(values[0], nameCheck);
+        if(temp)
+            strcpy(currCol, temp);
+        else {
+            strcpy(nameCheck, "(");
+            strcat(nameCheck, addQuotesToString(table->cols[i].name));
+            temp = strstr(values[0], nameCheck);
+            if(temp)
+                strcpy(currCol, temp);
+            else
+                if(currCol[strlen(nameCheck)] == ')')
+                    temp = NULL;
+        }
+        if(temp != NULL) {
+            currCol++;
+            if(currCol[0] == ' ')
+                currCol++;
+        }
         printf("%s\n", currCol);
-        if(currCol) {
+
+        if(temp != NULL) {
             char* colAttrs;
             if(currCol[0] == '`') {
                 currCol++;
@@ -3255,9 +3277,17 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 printf("FOREIGN KEY\n");
                 table->cols[i].hasForeignKey = 1;
 
-                table->cols[i].foreignKeyName = strdup(strstr(colAttrs, "REFERENCES ") + 11);
-                *strchr(table->cols[i].foreignKeyName, '(') = '.';
-                *strchr(table->cols[i].foreignKeyName, ')') = '\0';
+                char tableName[MAX_LEN * 2];
+                strcpy(tableName, strstr(colAttrs, "REFERENCES ") + 11);
+                char colName[MAX_LEN];
+                strcpy(colName, strchr(tableName, '(') + 1);
+                *strchr(tableName, '(') = '\0';
+                *strchr(colName, ')') = '\0';
+
+                table->cols[i].foreignKeyName = malloc(sizeof(char) * MAX_LEN * 2);
+                strcpy(table->cols[i].foreignKeyName, removeQuotesFromString(tableName));
+                strcat(table->cols[i].foreignKeyName, ".");
+                strcat(table->cols[i].foreignKeyName, removeQuotesFromString(colName));
             }
             if(strstr(colAttrs, "DEFAULT")) {
                 printf("DEFAULT DANCE\n");
