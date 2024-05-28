@@ -27,12 +27,14 @@ Execute the program with ./cql
 - Learn how to throw errors instead of just printing errors.
 - Add full library documentation.
 
+- Add join statements.
+
 - COMPLETE.
 
 ## Potential Additions At A Later Date
 
 - Group By in select statements.
-- Expand select statements to be able to refer to other tables. (Including adding join statements).
+- Expand select statements to be able to refer to other tables.
 - Multi-layered Sorting.
 - Adding CHECK attribute to columns.
 - Adding DATE datatype support.
@@ -44,7 +46,7 @@ Execute the program with ./cql
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.
 - Program is slow with larger tables.
-- Foreign Keys not validated or funcionally incorporated.
+- Foreign Keys are not validated when inserting unless the 'setForeignKey' function is called after a foreign key is added/changed.
 
 ## Project status
 Ongoing.

@@ -108,19 +108,20 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
     for(int i = 0; i < numCols; i++) {
         table.cols[i].name = strdup(colNames[i]);
         table.cols[i].type = colTypes[i];
+        table.cols[i].numRows = 0;
         initColAttrs(&table.cols[i]);
         if(colAttrs && colAttrs[i]) {
             if(defaultValues && foreignKeyNames)
-                assignColAttrs(&table.cols[i], colAttrs[i], defaultValues[i], foreignKeyNames[i], table.numRows);
+                assignColAttrs(&table.cols[i], colAttrs[i], defaultValues[i], foreignKeyNames[i]);
             else if(defaultValues)
-                assignColAttrs(&table.cols[i], colAttrs[i], defaultValues[i], NULL, table.numRows);
+                assignColAttrs(&table.cols[i], colAttrs[i], defaultValues[i], NULL);
             else if(foreignKeyNames)
-                assignColAttrs(&table.cols[i], colAttrs[i], NULL, foreignKeyNames[i], table.numRows);
+                assignColAttrs(&table.cols[i], colAttrs[i], NULL, foreignKeyNames[i]);
             else
-                assignColAttrs(&table.cols[i], colAttrs[i], NULL, NULL, table.numRows);
+                assignColAttrs(&table.cols[i], colAttrs[i], NULL, NULL);
         }
         else {
-            assignColAttrs(&table.cols[i], NULL, NULL, NULL, table.numRows);
+            assignColAttrs(&table.cols[i], NULL, NULL, NULL);
         }
     }
 
@@ -148,6 +149,8 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
     printf("PRE DEFAULTING\n");
 
     for(int i = 0; i < table->numCols; i++) {
+
+        table->cols[i].numRows++;
         if(table->numRows == 1)
             table->cols[i].values = malloc(sizeof(Value) * table->numRows);
         else
@@ -213,9 +216,23 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                             free(currCol.values[table->numRows - 1].val.CHAR);
                             values[i] = NULL;
                             i--;
+                            break;
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && strcmp((*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.CHAR, currCol.values[table->numRows - 1].val.CHAR) != 0) {
+                            printf("Value '%s' does not exist in foreign key '%s'.\n", currCol.values[table->numRows - 1].val.CHAR, currCol.fKeyName);
+                            free(currCol.values[table->numRows - 1].val.CHAR);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == INTEGER) {
                 printf("!I!\n");
@@ -230,6 +247,18 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.INTEGER != currCol.values[table->numRows - 1].val.INTEGER) {
+                            printf("Value '%d' does not exist in foreign key '%s'.\n", currCol.values[table->numRows - 1].val.INTEGER, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == DECIMAL) {
                 printf("!D!\n");
@@ -244,6 +273,18 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.DECIMAL != currCol.values[table->numRows - 1].val.DECIMAL) {
+                            printf("Value '%lf' does not exist in foreign key '%s'.\n", currCol.values[table->numRows - 1].val.DECIMAL, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == BOOL) {
                 printf("!B!\n");
@@ -258,6 +299,18 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.BOOL != currCol.values[table->numRows - 1].val.BOOL) {
+                            printf("Value '%d' does not exist in foreign key '%s'.\n", currCol.values[table->numRows - 1].val.BOOL, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == DATE) {
                 printf("DATE datatype support coming soon.\n");
@@ -291,6 +344,7 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
     Column currCol;
 
     for(int i = 0; i < table->numCols; i++) {
+        table->cols[i].numRows++;
         table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
         for(int j = table->numRows - 2; j >= rowNum; j--) {
             table->cols[i].values[j + 1].isNULL = table->cols[i].values[j].isNULL;
@@ -381,6 +435,19 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && strcmp((*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.CHAR, currCol.values[rowNum].val.CHAR) != 0) {
+                            printf("Value '%s' does not exist in foreign key '%s'.\n", currCol.values[rowNum].val.CHAR, currCol.fKeyName);
+                            free(currCol.values[rowNum].val.CHAR);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == INTEGER) {
                 currCol.values[rowNum].val.INTEGER = *(int*)values[i];
@@ -394,6 +461,18 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.INTEGER != currCol.values[rowNum].val.INTEGER) {
+                            printf("Value '%d' does not exist in foreign key '%s'.\n", currCol.values[rowNum].val.INTEGER, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == DECIMAL) {
                 currCol.values[rowNum].val.DECIMAL = *(double*)values[i];
@@ -407,6 +486,18 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.DECIMAL != currCol.values[rowNum].val.DECIMAL) {
+                            printf("Value '%lf' does not exist in foreign key '%s'.\n", currCol.values[rowNum].val.DECIMAL, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == BOOL) {
                 currCol.values[rowNum].val.BOOL = *(int*)values[i];
@@ -420,6 +511,18 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
                         }
                     }
                 }
+
+                if(values[i] != NULL && currCol.hasForeignKey) {
+                    for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
+                        if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.BOOL != currCol.values[rowNum].val.BOOL) {
+                            printf("Value '%d' does not exist in foreign key '%s'.\n", currCol.values[rowNum].val.BOOL, currCol.fKeyName);
+                            values[i] = NULL;
+                            i--;
+                            break;
+                        }
+                    }
+                }
+
             }
             else if(currCol.type == DATE)
                 printf("DATE datatype functionality coming soon.\n");
@@ -429,10 +532,6 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
         }
 
         free(colName);
-    }
-
-    if(currCol.autoIncrement) {
-
     }
 }
 
@@ -446,6 +545,7 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
     table->cols[table->numCols - 1].type = colType;
     table->cols[table->numCols - 1].name = strdup(colName);
     table->cols[table->numCols - 1].values = malloc(sizeof(Value) * table->numRows);
+    table->cols[table->numCols - 1].numRows = table->numRows;
 
     for(int i = 0; i < table->numRows; i++) {
         table->cols[table->numCols - 1].values[i].isNULL = 1;
@@ -453,7 +553,7 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
 
     printf("BEFORE ASSIGNING\n");
     initColAttrs(&table->cols[table->numCols - 1]);
-    assignColAttrs(&table->cols[table->numCols - 1], colAttrs, defaultValue, foreignKeyName, table->numRows);
+    assignColAttrs(&table->cols[table->numCols - 1], colAttrs, defaultValue, foreignKeyName);
     printf("AFTER ASSIGNING\n");
 
     for(int i = 0; i < numValues; i++) {
@@ -508,19 +608,20 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
     table->cols[table->numCols - 1].values = malloc(sizeof(Value) * table->numRows);
 
     for(int i = table->numCols - 1; i > colNum; i--) {
-        table->cols[i] = copyColumn(table->numRows, table->cols[i - 1]);
+        table->cols[i] = copyColumn(table->cols[i - 1]);
     }
 
     table->cols[colNum].type = colType;
     table->cols[colNum].name = strdup(colName);
     table->cols[colNum].values = malloc(sizeof(Value) * table->numRows);
+    table->cols[colNum].numRows = table->numRows;
 
     for(int i = 0; i < table->numRows; i++) {
         table->cols[colNum].values[i].isNULL = 1;
     }
 
     initColAttrs(&table->cols[colNum]);
-    assignColAttrs(&table->cols[colNum], colAttrs, defaultValue, foreignKeyName, table->numRows);
+    assignColAttrs(&table->cols[colNum], colAttrs, defaultValue, foreignKeyName);
 
     for(int i = 0; i < numValues; i++) {
         if(values[i] != NULL) {
@@ -561,12 +662,12 @@ void initColAttrs(Column* col) {
     col->notNull = 0;
     col->defaultValue.isNULL = 1;
     col->hasForeignKey = 0;
-    col->foreignKeyName = NULL;
+    col->fKeyName = NULL;
     col->isPrimaryKey = 0;
     col->autoIncrement = 0;
 }
 
-void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName, int numRows) {
+void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName) {
 
     printf("I'm HERE!\n");
 
@@ -605,7 +706,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                     printf("DATE datatype yet to be implemented.\n");
             }
 
-            for(int i = 0; i < numRows;i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(col->values[i].isNULL) {
                     col->values[i].isNULL = 0;
 
@@ -625,16 +726,16 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
         }
         if(strchr(attrs, 'P')) {
             col->isPrimaryKey = 1;
-            if(numRows > 0) {
-                deleteDuplicateValues(col, numRows);
+            if(col->numRows > 0) {
+                deleteDuplicateValues(col, col->numRows);
             }
         }
         if(strchr(attrs, 'F') && foreignKeyName) {
             col->hasForeignKey = 1;
             if(foreignKeyName)
-                col->foreignKeyName = strdup(foreignKeyName);
+                col->fKeyName = strdup(foreignKeyName);
             else
-                col->foreignKeyName = NULL;
+                col->fKeyName = NULL;
         }
         if(strchr(attrs, 'A')) {
             if(col->type == INTEGER || col->type == DECIMAL || col->type == CHAR) {
@@ -648,7 +749,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                     if(col->type == INTEGER) {
                         int maxVal = -1;
 
-                        for(int i = 0; i < numRows; i++)
+                        for(int i = 0; i < col->numRows; i++)
                             if(!col->values[i].isNULL && col->values[i].val.INTEGER > maxVal)
                                 maxVal = col->values[i].val.INTEGER;
 
@@ -657,7 +758,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                     else if(col->type == DECIMAL) {
                         double maxVal = -0.1;
 
-                        for(int i = 0; i < numRows; i++)
+                        for(int i = 0; i < col->numRows; i++)
                             if(!col->values[i].isNULL && col->values[i].val.DECIMAL > maxVal)
                                 maxVal = col->values[i].val.DECIMAL;
 
@@ -669,7 +770,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
 
                         int maxVal = letterToInt("A") - 1;
 
-                        for(int i = 0; i < numRows; i++) {
+                        for(int i = 0; i < col->numRows; i++) {
                             if(!col->values[i].isNULL) {
                                 int temp = letterToInt(col->values[i].val.CHAR);
                                 if(temp > maxVal)
@@ -681,7 +782,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                     }
                 }
 
-                for(int i = 0; i < numRows;i++) {
+                for(int i = 0; i < col->numRows;i++) {
                     if(col->values[i].isNULL) {
                         col->values[i].isNULL = 0;
 
@@ -707,6 +808,120 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
 
         }
     }
+}
+
+int setForeignKey(Column* col, int numTables, Table* tables, char* foreignKeyName) {
+    if(!col || !tables)
+        return 0;
+
+    if(col->fKeyName == NULL) {
+        if(foreignKeyName != NULL)
+            col->fKeyName = strdup(foreignKeyName);
+        else {
+            col->hasForeignKey = 0;
+            return 0;
+        }
+    }
+
+    if(strchr(col->fKeyName, '.') == NULL) {
+        col->hasForeignKey = 0;
+        free(col->fKeyName);
+        col->fKeyName = NULL;
+        return 0;
+    }
+
+    char tableName[MAX_LEN * 2];
+    strcpy(tableName, col->fKeyName);
+    char colName[MAX_LEN];
+    strcpy(colName, strchr(tableName, '.') + 1);
+    *strchr(tableName, '.') = '\0';
+
+    Table* foreignTable = NULL;
+
+    for(int i = 0; i < numTables; i++) {
+        if(strcmp(tableName, tables[i].name) == 0) {
+            foreignTable = &tables[i];
+            break;
+        }
+    }
+
+    if(foreignTable == NULL) {
+        col->hasForeignKey = 0;
+        free(col->fKeyName);
+        col->fKeyName = NULL;
+        return 0;
+    }
+
+    col->fKeyPointer = NULL;
+    col->fKeyIndex = -1;
+
+    for(int i = 0; i < foreignTable->numCols; i++) {
+        if(strcmp(colName, foreignTable->cols[i].name) == 0 && foreignTable->cols[i].isPrimaryKey && col->type == foreignTable->cols[i].type) {
+            col->fKeyPointer = &foreignTable->cols;
+            col->fKeyIndex = i;
+            break;
+        }
+    }
+
+    if(col->fKeyPointer == NULL) {
+        col->hasForeignKey = 0;
+        free(col->fKeyName);
+        col->fKeyName = NULL;
+        return 0;
+    }
+
+    if(col->type == CHAR) {
+        for(int i = 0; i < col->numRows; i++) {
+            for(int j = 0; j < (*col->fKeyPointer)[col->fKeyIndex].numRows; j++) {
+                if(!col->values[i].isNULL && !(*col->fKeyPointer)[col->fKeyIndex].values[j].isNULL) {
+                    if(strcmp(col->values[i].val.CHAR, (*col->fKeyPointer)[col->fKeyIndex].values[j].val.CHAR) != 0) {
+                        free(col->values[i].val.CHAR);
+                        col->values[i].val.CHAR = NULL;
+                        col->values[i].isNULL = 1;
+                    }
+                }
+            }
+        }
+    }
+    else if(col->type == INTEGER) {
+        for(int i = 0; i < col->numRows; i++) {
+            for(int j = 0; j < (*col->fKeyPointer)[col->fKeyIndex].numRows; j++) {
+                if(!col->values[i].isNULL && !(*col->fKeyPointer)[col->fKeyIndex].values[j].isNULL) {
+                    if(col->values[i].val.INTEGER != (*col->fKeyPointer)[col->fKeyIndex].values[j].val.INTEGER) {
+                        col->values[i].isNULL = 1;
+                    }
+                }
+            }
+        }
+    }
+    else if(col->type == DECIMAL) {
+        for(int i = 0; i < col->numRows; i++) {
+            for(int j = 0; j < (*col->fKeyPointer)[col->fKeyIndex].numRows; j++) {
+                if(!col->values[i].isNULL && !(*col->fKeyPointer)[col->fKeyIndex].values[j].isNULL) {
+                    if(col->values[i].val.DECIMAL != (*col->fKeyPointer)[col->fKeyIndex].values[j].val.DECIMAL) {
+                        col->values[i].isNULL = 1;
+                    }
+                }
+            }
+        }
+    }
+    else if(col->type == BOOL) {
+        for(int i = 0; i < col->numRows; i++) {
+            for(int j = 0; j < (*col->fKeyPointer)[col->fKeyIndex].numRows; j++) {
+                if(!col->values[i].isNULL && !(*col->fKeyPointer)[col->fKeyIndex].values[j].isNULL) {
+                    if(col->values[i].val.BOOL != (*col->fKeyPointer)[col->fKeyIndex].values[j].val.BOOL) {
+                        col->values[i].isNULL = 1;
+                    }
+                }
+            }
+        }
+    }
+    else if(col->type == DATE) {
+        printf("DATE datatype yet to be implemented.\n");
+    }
+
+    return 1;
+
 }
 
 /**
@@ -890,6 +1105,9 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
 
     if(numWheres <= 0)
         table->numRows = 0;
+
+    for(int i = 0; i < table->numCols; i++)
+        table->cols[i].numRows = table->numRows;
 }
 
 void freeTable(Table* table) {
@@ -898,6 +1116,8 @@ void freeTable(Table* table) {
             for(int j = 0; j < table->numRows; j++)
                 if(!table->cols[i].values[j].isNULL && table->cols[i].values[j].val.CHAR != NULL)
                     free(table->cols[i].values[j].val.CHAR);
+        if(table->cols[i].fKeyName != NULL)
+            free(table->cols[i].fKeyName);
         free(table->cols[i].values);
         free(table->cols[i].name);
     }
@@ -920,7 +1140,7 @@ void deleteColumn(Table* table, char* colName) {
         free(col.name);
         table->numCols--;
         for(int i = colIndex; i < table->numCols; i++)
-            table->cols[i] = copyColumn(table->numRows, table->cols[i + 1]);
+            table->cols[i] = copyColumn(table->cols[i + 1]);
 
         table->cols = realloc(table->cols, sizeof(Column) * table->numCols);
     }
@@ -957,6 +1177,7 @@ void deleteRow(Table* table, int rowNum) {
     table->numRows--;
 
     for(int i = 0; i < table->numCols; i++) {
+        table->cols[i].numRows--;
         if(table->cols[i].type == CHAR)
             if(!table->cols[i].values[table->numRows].isNULL)
                 free(table->cols[i].values[table->numRows].val.CHAR);
@@ -1023,7 +1244,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     for(int i = 0; i < numCols; i++) {
         if(!isAggregate(colNames[i])) {
             printf("TIME TO COPY\n");
-            newTable.cols[i] = copyColumn(baseTable.numRows, nameToCol(&baseTable, colNames[i], NULL));
+            newTable.cols[i] = copyColumn(nameToCol(&baseTable, colNames[i], NULL));
             printf("DONE COPYING\n");
             allAggs = 0;
         }
@@ -1178,8 +1399,10 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     }
 
     if(allAggs) {
-        for(int i = 0; i < numCols; i++)
+        for(int i = 0; i < numCols; i++) {
+            newTable.cols[i].numRows = 1;
             newTable.cols[i].values = realloc(newTable.cols[i].values, sizeof(Value));
+        }
         newTable.numRows = 1;
     }
 
@@ -1528,25 +1751,27 @@ Table copyTable(Table table) {
 
     for(int i = 0; i < newTable.numCols; i++) {
         printf("COPY COPY %d %d\n", table.cols[i].defaultValue.isNULL, nameToCol(&table, table.cols[i].name, NULL).defaultValue.isNULL);
-        newTable.cols[i] = copyColumn(table.numRows, table.cols[i]);
+        newTable.cols[i] = copyColumn(table.cols[i]);
         printf("DONE COPYING\n");
     }
 
     return newTable;
 }
 
-Column copyColumn(int numVals, Column col) {
+Column copyColumn(Column col) {
     Column colCopy;
 
     colCopy.name = strdup(col.name);
     colCopy.type = col.type;
+    colCopy.numRows = col.numRows;
 
     colCopy.autoIncrement = col.autoIncrement;
-    // printf("FOreign key name: %p\n", col.foreignKeyName);
-    if(col.foreignKeyName)
-        colCopy.foreignKeyName = strdup(col.foreignKeyName);
+    if(col.fKeyName)
+        colCopy.fKeyName = strdup(col.fKeyName);
     else
-        colCopy.foreignKeyName = NULL;
+        colCopy.fKeyName = NULL;
+    colCopy.fKeyPointer = col.fKeyPointer;
+    colCopy.fKeyIndex = col.fKeyIndex;
     colCopy.hasForeignKey = col.hasForeignKey;
     colCopy.isPrimaryKey = col.isPrimaryKey;
     colCopy.notNull = col.notNull;
@@ -1571,8 +1796,8 @@ Column copyColumn(int numVals, Column col) {
 
     printf("DONE WITH DEFAULT DANCING\n");
 
-    colCopy.values = malloc(sizeof(Value) * numVals);
-    for(int i = 0; i < numVals; i++) {
+    colCopy.values = malloc(sizeof(Value) * colCopy.numRows);
+    for(int i = 0; i < colCopy.numRows; i++) {
         colCopy.values[i].isNULL = col.values[i].isNULL;
         if(!colCopy.values[i].isNULL) {
             if(colCopy.type == INTEGER)
@@ -2261,10 +2486,10 @@ void printLoneRow(LoneValue* row, int numValues) {
     printf(" | \n");
 }
 
-void printColumn(Column col, int numValues) {
+void printColumn(Column col) {
 
     printf("\t| \e[1m%s\e[m |\n", col.name);
-    for(int i = 0; i < numValues; i++) {
+    for(int i = 0; i < col.numRows; i++) {
         printf("\t| ");
         if(col.values[i].isNULL) {
             printf("NULL");
@@ -2415,7 +2640,7 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
             }
         }
         else if(type == CHAR) {
-            for(int i = 0; i < table->numRows;i++) {
+            for(int i = 0; i < table->numRows; i++) {
                 do {
                     isMixed = 0;
                     for(int i = 0; i < table->numRows - 1;i++) {
@@ -2442,7 +2667,7 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
         else if(type == BOOL) {
             do {
                 isMixed = 0;
-                for(int i = 0; i < table->numRows - 1;i++) {
+                for(int i = 0; i < table->numRows - 1; i++) {
                     if(table->cols[colIndex].values[i].isNULL)
                         table->cols[colIndex].values[i].val.BOOL = 2;
                     if(table->cols[colIndex].values[i + 1].isNULL)
@@ -2918,12 +3143,12 @@ void exportTable(Table table, char* filename, int trunc) {
         if(table.cols[i].hasForeignKey) {
             strcat(sql, " REFERENCES ");
             char tableName[MAX_LEN];
-            strcpy(tableName, table.cols[i].foreignKeyName);
+            strcpy(tableName, table.cols[i].fKeyName);
             *strchr(tableName, '.') = '\0';
             strcpy(tableName, addQuotesToString(tableName));
             strcat(sql, tableName);
             strcat(sql, "(");
-            strcat(sql, addQuotesToString(strchr(table.cols[i].foreignKeyName, '.') + 1));
+            strcat(sql, addQuotesToString(strchr(table.cols[i].fKeyName, '.') + 1));
             strcat(sql, ")");
         }
         if(table.cols[i].notNull)
@@ -3261,7 +3486,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
             else if(strstr(colAttrs, typeToString(BOOL)) || strstr(colAttrs, "BIT"))
                 table->cols[i].type = BOOL;
 
-            if(strstr(colAttrs, "PRIMARY KEY")) {
+            if(strstr(colAttrs, "PRIMARY KEY") || strstr(colAttrs, "UNIQUE")) {
                 printf("PRIMARY KEY\n");
                 table->cols[i].isPrimaryKey = 1;
             }
@@ -3284,10 +3509,10 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 *strchr(tableName, '(') = '\0';
                 *strchr(colName, ')') = '\0';
 
-                table->cols[i].foreignKeyName = malloc(sizeof(char) * MAX_LEN * 2);
-                strcpy(table->cols[i].foreignKeyName, removeQuotesFromString(tableName));
-                strcat(table->cols[i].foreignKeyName, ".");
-                strcat(table->cols[i].foreignKeyName, removeQuotesFromString(colName));
+                table->cols[i].fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
+                strcpy(table->cols[i].fKeyName, removeQuotesFromString(tableName));
+                strcat(table->cols[i].fKeyName, ".");
+                strcat(table->cols[i].fKeyName, removeQuotesFromString(colName));
             }
             if(strstr(colAttrs, "DEFAULT")) {
                 printf("DEFAULT DANCE\n");
@@ -3413,12 +3638,10 @@ Table* userTableOperator(int numTables, Table* tables) {
     int rowCopyLength;
     Column colCopy;
     colCopy.name = NULL;
-    int colCopyLength;
 
     printf("\t\t-- Welcome to CQL! --\n");
 
     //ADD QUESTION FOR SELECTED TABLE IF THE USER WANTS TO APPLY THE CHANGES TO THE BASE TABLE!
-
     do {
         numWheres = 0;
 
@@ -3462,8 +3685,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                         attrList[i] = strdup(attrInputByType(typeList[i], &defaultValList[i], &foreignKeyList[i]));
                     }
                     tables[numTables - 1] = create(tableName, numThings, nameList, typeList, attrList, defaultValList, foreignKeyList);
+
                     currentTable = &tables[numTables - 1];
                     currTableIndex = numTables - 1;
+
+                    for(int i = 0; i < currentTable->numCols; i++)
+                        if(currentTable->cols[i].hasForeignKey) {
+                            if(setForeignKey(&currentTable->cols[i], numTables, tables, foreignKeyList[i]))
+                                printf("FOREIGN KEY SET\n");
+                            else
+                                printf("FOREIGN KEY FAILED TO INIT.\n");
+                        }
 
                     for(int i = 0; i < numThings; i++) {
                         free(nameList[i]);
@@ -3522,7 +3754,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "4. PRINT copied column"
                         if(colCopy.name != NULL) {
                             printf("The column you currently have copied:\n");
-                            printColumn(colCopy, colCopyLength);
+                            printColumn(colCopy);
                         }
                         else {
                             printf("You do not have a column copied at the moment.\n");
@@ -3979,9 +4211,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                             } while(colPos < 0 || colPos > currentTable->numCols);
 
                             insertIntoCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
+                            setForeignKey(&currentTable->cols[colPos], numTables, tables, foreignKeyName);
                         }
                         else {
                             insertCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName);
+                            setForeignKey(&currentTable->cols[currentTable->numCols - 1], numTables, tables, foreignKeyName);
                         }
 
                         if(valueList != NULL) {
@@ -4201,7 +4435,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 printf("Please try again: ");
                         } while(colIndex == -1);
                         nameToCol(currentTable, colName, &colIndex);
-                        attrInputByCol(&currentTable->cols[colIndex], currentTable->numRows);
+                        attrInputByCol(&currentTable->cols[colIndex]);
+                        setForeignKey(&currentTable->cols[colIndex], numTables, tables, NULL);
                         break;
                 }
 
@@ -4364,7 +4599,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
                             } while(newPos < 0 || newPos >= currentTable->numCols);
 
-                            Column dummyCol = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
+                            Column dummyCol = copyColumn(currentTable->cols[colPos]);
 
                             if(newPos > colPos)
                                 for(int i = colPos; i < newPos; i++)
@@ -4480,12 +4715,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
                         } while(colPos < 0 || colPos >= currentTable->numCols);
 
-                        colCopy = copyColumn(currentTable->numRows, currentTable->cols[colPos]);
-                        colCopyLength = currentTable->numRows;
+                        colCopy = copyColumn(currentTable->cols[colPos]);
 
                         printf("Column %s copied:\n", colString);
 
-                        printColumn(colCopy, colCopyLength);
+                        printColumn(colCopy);
 
                         free(colString);
 
@@ -4743,7 +4977,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                     case 2:
                         // "2. PASTE column in current table"
                         if(colCopy.name != NULL) {
-                            if(colCopyLength > currentTable->numRows) {
+                            if(colCopy.numRows > currentTable->numRows) {
                                 printf("How would you like to paste?:\n");
                                 printf("1. Shrink column to fit table\n"
                                     "2. Grow table to fit column\n"
@@ -4756,13 +4990,13 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 } while(menuChoices[1] < 1 || menuChoices[1] > 2);
 
                                 if(menuChoices[1] == 2) {
-                                    int numRowsMissing = colCopyLength - currentTable->numRows;
+                                    int numRowsMissing = colCopy.numRows - currentTable->numRows;
                                     for(int i = 0; i < numRowsMissing; i++)
                                         insertRow(currentTable, 0, NULL, NULL);
                                 }
                             }
 
-                            numThings = min(currentTable->numRows, colCopyLength);
+                            numThings = min(currentTable->numRows, colCopy.numRows);
 
                             numList = malloc(sizeof(int) * numThings);
                             valueList = malloc(sizeof(void*) * numThings);
@@ -4804,7 +5038,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                             }
                             if(colCopy.hasForeignKey) {
                                 strcat(attrs, "F");
-                                foreignKeyName = strdup(colCopy.foreignKeyName);
+                                foreignKeyName = strdup(colCopy.fKeyName);
                             }
                             if(colCopy.isPrimaryKey) {
                                 strcat(attrs, "P");
@@ -5757,7 +5991,7 @@ int rowNumInput(int** rowNums, int numRows) {
     return numRowsChosen;
 }
 
-void attrInputByCol(Column* col, int numRows) {
+void attrInputByCol(Column* col) {
     int input;
     void* defaultVal = NULL;
     char* foreignKeyName = NULL;
@@ -5806,7 +6040,7 @@ void attrInputByCol(Column* col, int numRows) {
             printf("DATE datatype support not yet implemented.");
         printf("')\n");
         printf("7. Foreign Key Name (Currently '");
-        printValue(col->foreignKeyName, CHAR);
+        printValue(col->fKeyName, CHAR);
         printf("')\n");
         printf("0. Done\n"
             "Choice: ");
@@ -5817,7 +6051,7 @@ void attrInputByCol(Column* col, int numRows) {
         } while(input < 0 || input > 7);
 
         if(input == 1) {
-            changeColType(col, typeInput(), numRows);
+            changeColType(col, typeInput());
         }
 
         else if(input == 2) {
@@ -5827,7 +6061,7 @@ void attrInputByCol(Column* col, int numRows) {
             }
             if(!col->autoIncrement) {
                 printf("Auto Increment attribute added.\n");
-                assignColAttrs(col, "A", NULL, NULL, numRows);
+                assignColAttrs(col, "A", NULL, NULL);
             }
             else {
                 printf("Auto Increment attribute removed.\n");
@@ -5886,7 +6120,7 @@ void attrInputByCol(Column* col, int numRows) {
                     defaultVal = NULL;
                 }
 
-                assignColAttrs(col, "N", defaultVal, NULL, numRows);
+                assignColAttrs(col, "N", defaultVal, NULL);
 
             }
             else {
@@ -5898,7 +6132,7 @@ void attrInputByCol(Column* col, int numRows) {
         else if(input == 4) {
             if(!col->isPrimaryKey) {
                 printf("Primary Key attribute added.\n");
-                assignColAttrs(col, "P", NULL, NULL, numRows);
+                assignColAttrs(col, "P", NULL, NULL);
             }
             else {
                 col->isPrimaryKey = 0;
@@ -5909,7 +6143,7 @@ void attrInputByCol(Column* col, int numRows) {
 
             if(!col->hasForeignKey) {
                 printf("Foreign Key attribute added.\n");
-                if(!col->foreignKeyName) {
+                if(!col->fKeyName) {
                     printf("Please input the name of the column you would like to be the foreign key (of the form 'TableName.ColumnName'): ");
 
                     foreignKeyName = malloc(sizeof(char) * MAX_LEN);
@@ -5921,16 +6155,16 @@ void attrInputByCol(Column* col, int numRows) {
                     foreignKeyName = realloc(foreignKeyName, sizeof(char) * (strlen(foreignKeyName) + 1));
                 }
 
-                assignColAttrs(col, "F", NULL, foreignKeyName, numRows);
+                assignColAttrs(col, "F", NULL, foreignKeyName);
 
                 free(foreignKeyName);
 
             }
             else {
                 col->hasForeignKey = 0;
-                if(col->foreignKeyName)
-                    free(col->foreignKeyName);
-                col->foreignKeyName = NULL;
+                if(col->fKeyName)
+                    free(col->fKeyName);
+                col->fKeyName = NULL;
                 printf("Foreign Key attribute removed.\n");
             }
 
@@ -5977,17 +6211,17 @@ void attrInputByCol(Column* col, int numRows) {
 
         }
         if(input == 7) {
-            if(!col->foreignKeyName)
-                free(col->foreignKeyName);
+            if(!col->fKeyName)
+                free(col->fKeyName);
             printf("Please input the name of the column you would like to be the foreign key (of the form 'TableName.ColumnName'): ");
 
-            col->foreignKeyName = malloc(sizeof(char) * MAX_LEN);
+            col->fKeyName = malloc(sizeof(char) * MAX_LEN);
             do {
-                fgetsUntil(col->foreignKeyName, MAX_LEN);
-                if(!strchr(col->foreignKeyName, '.'))
+                fgetsUntil(col->fKeyName, MAX_LEN);
+                if(!strchr(col->fKeyName, '.'))
                     printf("Please input the name with the formate 'TableName.ColumnName': ");
-            } while(!strchr(col->foreignKeyName, '.'));
-            col->foreignKeyName = realloc(col->foreignKeyName, sizeof(char) * (strlen(col->foreignKeyName) + 1));
+            } while(!strchr(col->fKeyName, '.'));
+            col->fKeyName = realloc(col->fKeyName, sizeof(char) * (strlen(col->fKeyName) + 1));
         }
 
     } while(input > 0);
@@ -6187,10 +6421,10 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
 
 }
 
-int changeColType(Column* col, int newType, int numRows) {
+int changeColType(Column* col, int newType) {
     if(newType == CHAR) {
         if(col->type == DECIMAL) {
-            for(int i = 0; i < numRows; i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(!col->values[i].isNULL) {
                     char* charVal = malloc(sizeof(char) * MAX_LEN);
                     sprintf(charVal, "%lf", col->values[i].val.DECIMAL);
@@ -6206,7 +6440,7 @@ int changeColType(Column* col, int newType, int numRows) {
             }
         }
         else if(col->type == INTEGER) {
-            for(int i = 0; i < numRows; i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(!col->values[i].isNULL) {
                     char* charVal = malloc(sizeof(char) * MAX_LEN);
                     sprintf(charVal, "%d", col->values[i].val.INTEGER);
@@ -6222,7 +6456,7 @@ int changeColType(Column* col, int newType, int numRows) {
             }
         }
         else if(col->type == BOOL) {
-            for(int i = 0; i < numRows; i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(!col->values[i].isNULL) {
                     if(col->values[i].val.BOOL == 1)
                         col->values[i].val.CHAR = strdup("TRUE");
@@ -6242,7 +6476,7 @@ int changeColType(Column* col, int newType, int numRows) {
     }
     else if(newType == INTEGER) {
         if(col->type == DECIMAL) {
-            for(int i = 0; i < numRows; i++)
+            for(int i = 0; i < col->numRows; i++)
                 if(!col->values[i].isNULL)
                     col->values[i].val.INTEGER = (int)round(col->values[i].val.DECIMAL);
             col->type = INTEGER;
@@ -6251,9 +6485,9 @@ int changeColType(Column* col, int newType, int numRows) {
         else if(col->type == CHAR) {
             int validTransfer = 1;
 
-            int* intValues = malloc(sizeof(int) * numRows);
+            int* intValues = malloc(sizeof(int) * col->numRows);
 
-            for(int i = 0; i < numRows && validTransfer; i++) {
+            for(int i = 0; i < col->numRows && validTransfer; i++) {
                 if(!col->values[i].isNULL) {
                     int success;
                     int temp;
@@ -6272,7 +6506,7 @@ int changeColType(Column* col, int newType, int numRows) {
             }
 
             if(validTransfer) {
-                for(int i = 0; i < numRows; i++) {
+                for(int i = 0; i < col->numRows; i++) {
                     if(!col->values[i].isNULL) {
                         free(col->values[i].val.CHAR);
                         col->values[i].val.INTEGER = intValues[i];
@@ -6293,7 +6527,7 @@ int changeColType(Column* col, int newType, int numRows) {
     }
     else if(newType == DECIMAL) {
         if(col->type == INTEGER) {
-            for(int i = 0; i < numRows; i++)
+            for(int i = 0; i < col->numRows; i++)
                 if(!col->values[i].isNULL)
                     col->values[i].val.DECIMAL = (double)round(col->values[i].val.INTEGER);
             col->type = DECIMAL;
@@ -6302,9 +6536,9 @@ int changeColType(Column* col, int newType, int numRows) {
         else if(col->type == CHAR) {
             int validTransfer = 1;
 
-            double* doubValues = malloc(sizeof(double) * numRows);
+            double* doubValues = malloc(sizeof(double) * col->numRows);
 
-            for(int i = 0; i < numRows && validTransfer; i++) {
+            for(int i = 0; i < col->numRows && validTransfer; i++) {
                 if(!col->values[i].isNULL) {
                     int success;
                     double temp;
@@ -6317,7 +6551,7 @@ int changeColType(Column* col, int newType, int numRows) {
             }
 
             if(validTransfer) {
-                for(int i = 0; i < numRows; i++) {
+                for(int i = 0; i < col->numRows; i++) {
                     if(!col->values[i].isNULL) {
                         free(col->values[i].val.CHAR);
                         col->values[i].val.DECIMAL = doubValues[i];
@@ -6332,7 +6566,7 @@ int changeColType(Column* col, int newType, int numRows) {
             return 0;
         }
         else if(col->type == BOOL) {
-            for(int i = 0; i < numRows; i++)
+            for(int i = 0; i < col->numRows; i++)
                 if(!col->values[i].isNULL)
                     col->values[i].val.DECIMAL = (double)col->values[i].val.BOOL;
             col->type = DECIMAL;
@@ -6341,7 +6575,7 @@ int changeColType(Column* col, int newType, int numRows) {
     }
     else if(newType == BOOL) {
         if(col->type == DECIMAL) {
-            for(int i = 0; i < numRows; i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(!col->values[i].isNULL) {
                     if(col->values[i].val.DECIMAL > 0)
                         col->values[i].val.BOOL = 1;
@@ -6354,9 +6588,9 @@ int changeColType(Column* col, int newType, int numRows) {
         }
         else if(col->type == CHAR) {
             int validTransfer = 1;
-            int* boolValues = malloc(sizeof(int) * numRows);
+            int* boolValues = malloc(sizeof(int) * col->numRows);
 
-            for(int i = 0; i < numRows && validTransfer; i++) {
+            for(int i = 0; i < col->numRows && validTransfer; i++) {
                 if(!col->values[i].isNULL) {
                     if(strcmp(col->values[i].val.CHAR, "TRUE"))
                         boolValues[i] = 1;
@@ -6368,7 +6602,7 @@ int changeColType(Column* col, int newType, int numRows) {
             }
 
             if(validTransfer) {
-                for(int i = 0; i < numRows; i++) {
+                for(int i = 0; i < col->numRows; i++) {
                     if(!col->values[i].isNULL) {
                         free(col->values[i].val.CHAR);
                         col->values[i].val.BOOL = boolValues[i];
@@ -6383,7 +6617,7 @@ int changeColType(Column* col, int newType, int numRows) {
             return 0;
         }
         else if(col->type == INTEGER) {
-            for(int i = 0; i < numRows; i++) {
+            for(int i = 0; i < col->numRows; i++) {
                 if(!col->values[i].isNULL) {
                     if(col->values[i].val.INTEGER > 0)
                         col->values[i].val.BOOL = 1;

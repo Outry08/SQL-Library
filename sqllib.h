@@ -49,16 +49,21 @@ typedef struct {
     char* colName;
 } LoneValue;
 
-typedef struct {
+typedef struct Column {
     Value* values;
     char* name;
     TypeEnum type;
-    int notNull; //0 or 1 //take user input along with column name.
-    int isPrimaryKey; //0 or 1 //take user input along with column name
-    int hasForeignKey; //0 or 1 //take user input along with column name.
-    char* foreignKeyName; //take user input along with column name.
-    Value defaultValue;
+    int numRows;
+
+    int notNull;
     int autoIncrement;
+    Value defaultValue;
+    int isPrimaryKey;
+    int hasForeignKey;
+
+    char* fKeyName;
+    struct Column** fKeyPointer;
+    int fKeyIndex;
 } Column;
 
 typedef struct {
@@ -139,12 +144,12 @@ void printTable(Table table); //Implemented
 void printSeparatorLine(int numCols, int rowNum); //Implemented
 void printRow(Table table, int rowIndex); //Implemented
 void printLoneRow(LoneValue* row, int numValues); //Implemented
-void printColumn(Column col, int numValues); //Implemented
+void printColumn(Column col); //Implemented
 char* intToLetter(int number); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
 
 void initColAttrs(Column* col); //Implemented
-void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName, int numRows);
+void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName);
 
 int* actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
@@ -152,9 +157,9 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList); /
 int typeInput(void); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
-void attrInputByCol(Column* col, int numRows); //Implemented
+void attrInputByCol(Column* col); //Implemented
 char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName); //Implemented
-int changeColType(Column* col, int newType, int numRows); //Implemented
+int changeColType(Column* col, int newType); //Implemented
 void printType(int type); //Implemented
 void printValue(void* value, int type); //Implemented
 char* typeToString(int type); //Implemented
@@ -165,7 +170,7 @@ char* removeQuotesFromString(char* string); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
 Table copyTable(Table table); //Implemented
-Column copyColumn(int numVals, Column col); //Implemented
+Column copyColumn(Column col); //Implemented
 LoneValue* copyRow(Table* currentTable, int rowNum); //Implemented
 
 char* dateToString(Date date);
