@@ -71,7 +71,6 @@ typedef struct {
     char* name;
     int numCols;
     int numRows;
-    int selected;
 } Table;
 
 //Possibly add BETWEEN functionality to this struct? As an allowed comparion?
@@ -114,8 +113,9 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName); //Implemented
 void deleteRow(Table* table, int rowNum); //Implemented
-void deleteDuplicateValues(Column* col, int numRows); //Implemented
+void deleteDuplicateValues(Column* col); //Implemented
 void deleteDuplicateValRows(Table* table, int numCols, char** colNames); //Implemented
+int deleteInvalidFKeyVals(Column* col); //Implemented
 int getValIndex(Column col, void* value);
 void sortTableByCol(Table* table, char* colName, int ascending); //Implemented
 
