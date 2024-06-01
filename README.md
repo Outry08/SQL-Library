@@ -15,8 +15,6 @@ Execute the program with ./cql
 
 ## Roadmap
 
-- Add the ability to input '*' to indicate 'all' in many user input places.
-- Allow user to type NULL for where condition of ANY datatype.
 - Allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.
 - Prohibit name inputs with keyworks like 'COUNT' or 'AVG' or 'sqlite3_MASTER' or '*' or '.'
 - Add 'back' or 'cancel' option to nearly every stage of user input.
@@ -25,7 +23,9 @@ Execute the program with ./cql
 - Learn how to throw errors instead of just printing errors.
 - Add full library documentation.
 
+If I feel like it:
 - Add join statements.
+- Add DATE datatype functionality.
 
 - COMPLETE.
 

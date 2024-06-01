@@ -187,6 +187,7 @@ void checkColumnNames(Table table, char* nameToCheck, int newNameIndex); //Imple
 
 void fgetsUntil(char* string, int size); //Implemented
 void scanfWell(char* formSpec, void* val); //Implemented
+void scanfWellNull(char* formSpec, void* val); //Implemented
 void cql_sleep(int milliseconds); //Implemented
 void* memdup(void* src, int numBytes);
 
