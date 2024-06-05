@@ -14,10 +14,11 @@ Execute the program with ./cql
 ## Visuals
 
 ## Roadmap
-
 - Allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.
 - Prohibit name inputs with keyworks like 'COUNT' or 'AVG' or 'sqlite3_MASTER' or '*' or '.'
 - Add 'back' or 'cancel' option to nearly every stage of user input.
+- Extra CHAR comparisons (Contains, starts with, ends with).
+- Make SAVE & QUIT actually work.
 
 - Valgrind and fix all leaks.
 - Learn how to throw errors instead of just printing errors.
