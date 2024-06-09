@@ -163,15 +163,17 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
             table->cols[i].values[table->numRows - 1].isNULL = 0;
             // printf("HI\n");
             if(table->cols[i].type == CHAR) {
-                // printf("HELLO THERE\n");
+                // printf("HELLO THERE, %s\n", table->cols[i].defaultValue.val.CHAR);
                 table->cols[i].values[table->numRows - 1].val.CHAR = strdup(table->cols[i].defaultValue.val.CHAR);
+                // printf("IS BAD?\n");
                 if(table->cols[i].autoIncrement) {
+                    // printf("L'AUTO\n");
                     table->cols[i].defaultValue.val.CHAR = strdup(intToLetter(letterToInt(table->cols[i].defaultValue.val.CHAR) + 1));
                     // printf("I LIVE\n");
                 }
             }
             else if(table->cols[i].type == INTEGER) {
-                // printf("THIS IS PROBLEM\n");
+                // printf("THIS IS PROBLEM %d\n", table->cols[i].defaultValue.val.INTEGER);
                 table->cols[i].values[table->numRows - 1].val.INTEGER = table->cols[i].defaultValue.val.INTEGER;
                 if(table->cols[i].autoIncrement)
                     table->cols[i].defaultValue.val.INTEGER++;
@@ -216,7 +218,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                     }
                 }
 
-                if(values[i] != NULL && currCol.hasForeignKey) {
+                if(values[i] != NULL && currCol.hasForeignKey && currCol.fKeyPointer && currCol.fKeyIndex >= 0) {
                     int valid = 0;
                     for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
                         if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && strcmp((*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.CHAR, currCol.values[table->numRows - 1].val.CHAR) == 0) {
@@ -247,7 +249,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                     }
                 }
 
-                if(values[i] != NULL && currCol.hasForeignKey) {
+                if(values[i] != NULL && currCol.hasForeignKey && currCol.fKeyPointer && currCol.fKeyIndex >= 0) {
                     int valid = 0;
                     for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
                         if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.INTEGER == currCol.values[table->numRows - 1].val.INTEGER) {
@@ -277,7 +279,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                     }
                 }
 
-                if(values[i] != NULL && currCol.hasForeignKey) {
+                if(values[i] != NULL && currCol.hasForeignKey && currCol.fKeyPointer && currCol.fKeyIndex >= 0) {
                     int valid = 0;
                     for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
                         if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.DECIMAL == currCol.values[table->numRows - 1].val.DECIMAL) {
@@ -307,7 +309,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
                     }
                 }
 
-                if(values[i] != NULL && currCol.hasForeignKey) {
+                if(values[i] != NULL && currCol.hasForeignKey && currCol.fKeyPointer && currCol.fKeyIndex >= 0) {
                     int valid = 0;
                     for(int j = 0; j < (*currCol.fKeyPointer)[currCol.fKeyIndex].numRows; j++) {
                         if(!(*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].isNULL && (*currCol.fKeyPointer)[currCol.fKeyIndex].values[j].val.BOOL == currCol.values[table->numRows - 1].val.BOOL) {
@@ -719,6 +721,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
         }
         if(strchr(attrs, 'N')) {
             col->notNull = 1;
+            printf("NULLY NULLY\n");
             if(!defaultVal && col->defaultValue.isNULL) {
                 col->defaultValue.isNULL = 0;
                 if(col->type == INTEGER)
@@ -758,6 +761,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
             }
         }
         if(strchr(attrs, 'F') && foreignKeyName) {
+            printf("%s : %s\n\n", col->name, foreignKeyName);
             col->hasForeignKey = 1;
             if(foreignKeyName)
                 col->fKeyName = strdup(foreignKeyName);
@@ -837,25 +841,12 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
     }
 }
 
-int setForeignKey(Column* col, int numTables, Table* tables, char* foreignKeyName) {
+int setForeignKeyPointer(Column* col, int numTables, Table* tables) {
     if(!col || !tables)
         return 0;
 
-    if(col->fKeyName == NULL) {
-        if(foreignKeyName != NULL)
-            col->fKeyName = strdup(foreignKeyName);
-        else {
-            col->hasForeignKey = 0;
-            return 0;
-        }
-    }
-
-    if(strchr(col->fKeyName, '.') == NULL) {
-        col->hasForeignKey = 0;
-        free(col->fKeyName);
-        col->fKeyName = NULL;
+    if(strchr(col->fKeyName, '.') == NULL)
         return 0;
-    }
 
     char tableName[MAX_LEN * 2];
     strcpy(tableName, col->fKeyName);
@@ -872,12 +863,8 @@ int setForeignKey(Column* col, int numTables, Table* tables, char* foreignKeyNam
         }
     }
 
-    if(foreignTable == NULL) {
-        col->hasForeignKey = 0;
-        free(col->fKeyName);
-        col->fKeyName = NULL;
+    if(foreignTable == NULL)
         return 0;
-    }
 
     col->fKeyPointer = NULL;
     col->fKeyIndex = -1;
@@ -890,12 +877,8 @@ int setForeignKey(Column* col, int numTables, Table* tables, char* foreignKeyNam
         }
     }
 
-    if(col->fKeyPointer == NULL) {
-        col->hasForeignKey = 0;
-        free(col->fKeyName);
-        col->fKeyName = NULL;
+    if(col->fKeyPointer == NULL)
         return 0;
-    }
 
     deleteInvalidFKeyVals(col);
 
@@ -2923,6 +2906,7 @@ Table* importTable(char* tableName, char* filename) {
             void** value = malloc(sizeof(void*));
             //*value goes in as char* and comes out as Table*
             *value = strdup(tableName);
+            // printf("CREATEY MATEY\n");
             sqlite3_exec(db, sql, callbackCreateTable, value, errMessage);
 
             printTable(*((Table*)(*value)));
@@ -2935,11 +2919,17 @@ Table* importTable(char* tableName, char* filename) {
             strcpy(sql, "SELECT sql FROM SQLITE_MASTER WHERE Name = '");
             strcat(sql, tableName);
             strcat(sql, "'");
+            printf("ATTR GET!\n");
             sqlite3_exec(db, sql, callbackGetAttributes, table, errMessage);
 
             strcpy(sql, "SELECT * FROM ");
             strcat(sql, properName);
+            printf("INSERTY\n");
             sqlite3_exec(db, sql, callbackInsertData, table, errMessage);
+            for(int i = 0; i < table->numCols; i++)
+                if(table->cols[i].autoIncrement)
+                    assignColAttrs(&table->cols[i], "A", NULL, NULL);
+
         }
         else {
             printf("Error: Table '%s' not found in file '%s'. Import failed.\n", tableName, filename);
@@ -3102,6 +3092,10 @@ int importDatabase(char* filename, Table** tables) {
 
         sqlite3_exec(db, sql, callbackGetTableNames, names, errMessage);
 
+        for(int i = 0; i < names->numNames; i++) {
+            printf("%d %s\n", i, names->names[i]);
+        }
+
         sqlite3_close(db);
 
         numTables = names->numNames;
@@ -3149,6 +3143,7 @@ int importDatabase(char* filename, Table** tables) {
 
             while(fgets(line, 1000, fp)) {
                 numLines++;
+                // printf("%d\n", numLines);
                 if(numLines > 10)
                     sql = realloc(sql, (numLines + 10) * 1000);
                 strcat(sql, line);
@@ -3158,6 +3153,8 @@ int importDatabase(char* filename, Table** tables) {
             sqlite3* db;
             char** errMessage = malloc(sizeof(char*));
             *errMessage = strdup("Error: SQL Execution Failed");
+
+            printf("%s\n", sql);
 
             truncate("load.db", 0);
 
@@ -3502,6 +3499,7 @@ int callbackInsertData(void* value, int numCols, char** values, char** colNames)
             // printf("NULL\n");
         }
     }
+    // printf("INSERT ROWWWW\n");
     insertRow(table, numCols, colNames, (void**)values);
 
     // printf("DONE INSERTING\n");
@@ -3514,7 +3512,7 @@ int callbackGetTableNames(void* value, int numCols, char** values, char** colNam
         int numNames;
     };
 
-    if(strcmp(values[0], "sqlite_sequence")) {
+    if(strstr(values[0], "sqlite") == NULL) {
         if(++(((struct TableNames*)value)->numNames) == 1)
             ((struct TableNames*)value)->names = malloc(sizeof(char*));
         else
@@ -3530,13 +3528,15 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
     Table* table = ((Table*)value);
     char* currCol = malloc(sizeof(char) * (strlen(values[0]) + MAX_LEN));
 
-    // printf("YEETUS: %s\n", values[0]);
+    printf("YEETUS: %s\n", values[0]);
+
+    shrinkSpaces(&values[0]);
 
     printTable(*table);
 
     for(int i = 0; i < table->numCols; i++) {
-        // printf("HELP\n");
-        // printf("%s\n", table->cols[i].name);
+        printf("HELP\n");
+        printf("%s\n", table->cols[i].name);
         char nameCheck[MAX_LEN];
         char* temp;
         strcpy(nameCheck, ", ");
@@ -3559,7 +3559,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
             if(currCol[0] == ' ')
                 currCol++;
         }
-        // printf("%s\n", currCol);
+        printf("%s\n", currCol);
 
         if(temp != NULL) {
             char* colAttrs;
@@ -3573,7 +3573,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
             if(strstr(colAttrs, ","))
                 strstr(colAttrs, ",")[0] = '\0';
 
-            // printf("%s\n", colAttrs);
+            printf("%s\n", colAttrs);
 
             if(strstr(colAttrs, typeToString(INTEGER)))
                 table->cols[i].type = INTEGER;
@@ -3588,15 +3588,15 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
 
             if(strstr(colAttrs, "PRIMARY KEY") || strstr(colAttrs, "UNIQUE")) {
                 // printf("PRIMARY KEY\n");
-                table->cols[i].isPrimaryKey = 1;
+                assignColAttrs(&table->cols[i], "P", NULL, NULL);
             }
             if(strstr(colAttrs, "AUTO_INCREMENT") || strstr(colAttrs, "AUTO INCREMENT") || strstr(colAttrs, "AUTOINCREMENT")) {
                 // printf("AUTO INCREMENT\n");
-                table->cols[i].autoIncrement = 1;
+                assignColAttrs(&table->cols[i], "A", NULL, NULL);
             }
             if(strstr(colAttrs, "NOT NULL")) {
                 // printf("NOT NULL\n");
-                table->cols[i].notNull = 1;
+                assignColAttrs(&table->cols[i], "N", NULL, NULL);
             }
             if(strstr(colAttrs, "REFERENCES")) {
                 // printf("FOREIGN KEY\n");
@@ -3609,10 +3609,13 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 *strchr(tableName, '(') = '\0';
                 *strchr(colName, ')') = '\0';
 
-                table->cols[i].fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
-                strcpy(table->cols[i].fKeyName, removeQuotesFromString(tableName));
-                strcat(table->cols[i].fKeyName, ".");
-                strcat(table->cols[i].fKeyName, removeQuotesFromString(colName));
+                char* fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
+                strcpy(fKeyName, removeQuotesFromString(tableName));
+                strcat(fKeyName, ".");
+                strcat(fKeyName, removeQuotesFromString(colName));
+
+                assignColAttrs(&table->cols[i], "F", NULL, fKeyName);
+                free(fKeyName);
             }
             if(strstr(colAttrs, "DEFAULT")) {
                 // printf("DEFAULT DANCE\n");
@@ -3660,7 +3663,76 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
             }
         }
     }
-    // printf("%s\n", values[0]);
+
+    printf("TIME FOR BADNESS\n");
+    char* temp;
+    do {
+        temp = strstr(values[0], ", PRIMARY KEY(");
+        printf("%s\n", temp);
+        if(!temp) {
+            temp = strstr(values[0], ", FOREIGN KEY(");
+            if(temp) {
+                printf("%s\n", temp);
+                char* colName = strdup(strstr(temp, "(") + 1);
+                *strchr(colName, ')') = '\0';
+                strcpy(colName, removeQuotesFromString(colName));
+
+                int fColInd = 0;
+                Column fCol = nameToCol(table, colName, &fColInd);
+
+                if(strstr(temp, "REFERENCES")) {
+
+                    char tableName[MAX_LEN * 2];
+                    strcpy(tableName, strstr(temp, "REFERENCES ") + 11);
+                    printf("%s\n", tableName);
+                    char fColName[MAX_LEN];
+                    if(strchr(tableName, '(')) {
+                        strcpy(fColName, strchr(tableName, '(') + 1);
+                        *strchr(fColName, ')') = '\0';
+                    }
+                    else
+                        strcpy(fColName, fCol.name);
+
+                    if(strchr(tableName, '('))
+                        *strchr(tableName, '(') = '\0';
+                    else if(strchr(tableName, ')'))
+                        *strchr(tableName, ')') = '\0';
+                    else if(strchr(tableName, ','))
+                        *strchr(tableName, ',') = '\0';
+
+                    printf("%s\n", fColName);
+
+                    char* fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
+                    strcpy(fKeyName, removeQuotesFromString(tableName));
+                    strcat(fKeyName, ".");
+                    strcat(fKeyName, removeQuotesFromString(fColName));
+
+                    printf("%s\n", fKeyName);
+
+                    assignColAttrs(&table->cols[fColInd], "F", NULL, fKeyName);
+                    free(fKeyName);
+                }
+                else {
+                    assignColAttrs(&table->cols[fColInd], "F", NULL, NULL);
+                }
+                values[0] = temp + 1;
+            }
+        }
+        else {
+            char* colName = strdup(strstr(temp, "(") + 1);
+            *strchr(colName, ')') = '\n';
+            strcpy(colName, removeQuotesFromString(colName));
+            Column pCol = nameToCol(table, colName, NULL);
+            assignColAttrs(&pCol, "P", NULL, NULL);
+            values[0] = temp + 1;
+        }
+        if(strchr(values[0], ','))
+            values[0] = strchr(values[0], ',');
+        else if(strchr(values[0], ')'))
+            values[0] = strchr(values[0], ')');
+
+    } while(temp != NULL);
+    // printf("i didit\n");
     return 0;
 }
 
@@ -3696,7 +3768,14 @@ char* addQuotesToString(char* string) {
 }
 
 char* removeQuotesFromString(char* string) {
+
+    if(!string)
+        return NULL;
+
     char* newString = strdup(string);
+
+    if(string[0] != '\'' && string[0] != '`')
+        return newString;
 
     for(int i = 0; i < strlen(newString) - 2; i++)
         newString[i] = newString[i + 1];
@@ -3706,14 +3785,33 @@ char* removeQuotesFromString(char* string) {
 
 }
 
+void shrinkSpaces(char** string) {
+
+    char* newString = malloc(sizeof(char) * (strlen(*string) + 1));
+    int spaceCount = 0;
+    int charCount = 0;
+    for(int i = 0; i < strlen(*string); i++) {
+        if((*string)[i] != ' ' && (*string)[i] != '\n') {
+            spaceCount = 0;
+            newString[charCount++] = (*string)[i];
+        }
+        else {
+            if(spaceCount == 0)
+                newString[charCount++] = ' ';
+            spaceCount++;
+        }
+    }
+
+    *string = newString;
+
+}
+
 Table* userTableOperator(int numTables, Table* tables) {
 
     Table* currentTable = NULL;
 
     int* menuChoices;
     int currTableIndex = -1;;
-
-    char yesno[MAX_LEN];
 
     char tableName[MAX_LEN];
     char colName[MAX_LEN];
@@ -3793,7 +3891,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                     for(int i = 0; i < currentTable->numCols; i++) {
                         if(currentTable->cols[i].hasForeignKey) {
-                            if(setForeignKey(&currentTable->cols[i], numTables, tables, foreignKeyList[i]))
+                            if(setForeignKeyPointer(&currentTable->cols[i], numTables, tables))
                                 printf("FOREIGN KEY SET\n");
                             else
                                 printf("FOREIGN KEY FAILED TO INIT.\n");
@@ -3824,6 +3922,12 @@ Table* userTableOperator(int numTables, Table* tables) {
                     currentTable = &tables[numTables - 1];
                     currTableIndex = numTables - 1;
                 }
+
+                for(int i = 0; i < numTables; i++)
+                    for(int j = 0; j < tables[i].numCols; j++)
+                        if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
+                            setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
+
                 break;
             case 2:
                 //"2. PRINT"
@@ -3993,14 +4097,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 // // }
 
                 printf("Would you like to filter your result with a where statement? (yes/no): ");
-                do {
-                    fgetsUntil(yesno, MAX_LEN);
-                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                        printf("Please input 'yes' or 'no': ");
-                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-
-                if(strcmp(yesno, "yes") == 0)
+                if(isYes(yesnoInput()))
                     numWheres = whereInput(currentTable, &whereList, &connectiveList);
 
                 /*
@@ -4012,13 +4110,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                 */
 
                 printf("Do you want to omit duplicate values in this select? (yes/no): ");
-                do {
-                    fgetsUntil(yesno, MAX_LEN);
-                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                        printf("Please input 'yes' or 'no': ");
-                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-                if(strcmp(yesno, "yes") == 0)
+                if(isYes(yesnoInput()))
                     sel.distinct = 1;
                 else
                     sel.distinct = 0;
@@ -4336,11 +4429,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                             } while(colPos < 0 || colPos > currentTable->numCols);
 
                             insertIntoCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
-                            setForeignKey(&currentTable->cols[colPos], numTables, tables, foreignKeyName);
+                            setForeignKeyPointer(&currentTable->cols[colPos], numTables, tables);
                         }
                         else {
                             insertCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName);
-                            setForeignKey(&currentTable->cols[currentTable->numCols - 1], numTables, tables, foreignKeyName);
+                            setForeignKeyPointer(&currentTable->cols[currentTable->numCols - 1], numTables, tables);
                         }
 
                         if(valueList != NULL) {
@@ -4444,14 +4537,9 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                 if(numUpdCols + 1 <= currentTable->numCols) {
                                     printf("Would you like to add another column to have its values updated? (yes/no): ");
-                                    do {
-                                        fgetsUntil(yesno, MAX_LEN);
-                                        if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                            printf("Please input 'yes' or 'no': ");
-                                    } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
                                 }
 
-                            } while(strcmp(yesno, "yes") == 0 && numUpdCols + 1 <= currentTable->numCols);
+                            } while(isYes(yesnoInput()) && numUpdCols + 1 <= currentTable->numCols);
 
                             numWheres = whereInput(currentTable, &whereList, &connectiveList);
 
@@ -4567,7 +4655,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         } while(colIndex == -1);
                         nameToCol(currentTable, colName, &colIndex);
                         attrInputByCol(&currentTable->cols[colIndex]);
-                        setForeignKey(&currentTable->cols[colIndex], numTables, tables, NULL);
+                        setForeignKeyPointer(&currentTable->cols[colIndex], numTables, tables);
                         break;
                 }
 
@@ -5022,14 +5110,9 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                 if(numUpdCols + 1 <= currentTable->numCols) {
                                     printf("Would you like to add another column to have its values updated? (yes/no): ");
-                                    do {
-                                        fgetsUntil(yesno, MAX_LEN);
-                                        if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                            printf("Please input 'yes' or 'no': ");
-                                    } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
                                 }
 
-                            } while(strcmp(yesno, "yes") == 0 && numUpdCols + 1 <= currentTable->numCols);
+                            } while(isYes(yesnoInput()) && numUpdCols + 1 <= currentTable->numCols);
 
                             numWheres = whereInput(currentTable, &whereList, &connectiveList);
 
@@ -5128,13 +5211,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     "Would you like to paste this row with respect to the column names?\n"
                                     "(You will otherwise paste with respect to the column types and the current ordering of the columns and your row)\n"
                                     "(yes / no): ");
-                                do {
-                                    fgetsUntil(yesno, MAX_LEN);
-                                    if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                        printf("Please input 'yes' or 'no': ");
-                                } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-                                if(strcmp(yesno, "yes") == 0) {
+                                if(isYes(yesnoInput())) {
                                     proceed = 1;
 
                                     int numCommonNames = 0;
@@ -5147,13 +5225,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                                         printf("Would you like to include the values that do not share a column name in your paste?\n"
                                             "(This will expand your table and insert the missing columns)\n"
                                             "(yes / no): ");
-                                        do {
-                                            fgetsUntil(yesno, MAX_LEN);
-                                            if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                                printf("Please input 'yes' or 'no': ");
-                                        } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-                                        if(strcmp(yesno, "yes") == 0)
+                                        if(isYes(yesnoInput()))
                                             includeMissing = 1;
                                     }
 
@@ -5465,7 +5538,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         printf("Which table would you like to delete values from?\n");
                     else if(menuChoices[1] == 4)
                         printf("Which table would you like to delete?\n");
-                    if(menuChoices[1] != 5) {
+                    if(menuChoices[1] < 5 && menuChoices[1] > 0) {
                         currTableIndex = tableMenu(numTables, tables);
                         currentTable = &tables[currTableIndex];
                         printf("Here is your current table:\n");
@@ -5606,15 +5679,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     valueList[numDelCols - 1] = NULL;
 
                                     if(numDelCols + 1 <= currentTable->numCols) {
-
                                         printf("Would you like to add another column to have its values deleted? (yes/no): ");
-                                        do {
-                                            fgetsUntil(yesno, MAX_LEN);
-                                            if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                                                printf("Please input 'yes' or 'no': ");
-                                        } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
                                     }
-                                } while(strcmp(yesno, "yes") == 0 && numDelCols + 1 <= currentTable->numCols);
+
+                                } while(isYes(yesnoInput()) && numDelCols + 1 <= currentTable->numCols);
 
                                 numWheres = whereInput(currentTable, &whereList, &connectiveList);
 
@@ -5777,7 +5845,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                         }
 
                         if(strcmp(filename, "cancel") != 0) {
+                            printf("YEET\n");
                             Table* importedTable = importTable(tableName, filename);
+                            printf("HEHE\n");
                             if(importedTable) {
                                 numTables++;
                                 if(numTables == 1)
@@ -5788,6 +5858,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 checkTableNames(tables, numTables, tables[numTables - 1].name, numTables - 1);
                                 currentTable = &tables[numTables - 1];
                                 currTableIndex = numTables - 1;
+                                for(int i = 0; i < numTables; i++)
+                                    for(int j = 0; j < tables[i].numCols; j++)
+                                        if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
+                                            setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
                             }
                         }
                         break;
@@ -5807,13 +5881,8 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         if(strcmp(filename, "cancel") != 0) {
                             printf("Are you sure you want to overwrite the current database? (yes/no): ");
-                            do {
-                                fgetsUntil(yesno, MAX_LEN);
-                                if(strcmp(yesno, "yes") != 0 && strcmp(yesno, "no") != 0)
-                                    printf("Please input 'yes' or 'no': ");
-                            } while(strcmp(yesno, "yes") != 0 && strcmp(yesno, "no") != 0);
 
-                            if(strcmp(yesno, "yes") == 0) {
+                            if(isYes(yesnoInput())) {
                                 Table* newTables;
                                 int numTablesLoaded = importDatabase(filename, &newTables);
 
@@ -5826,6 +5895,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     currTableIndex = -1;
                                     numTables = numTablesLoaded;
                                     tables = newTables;
+                                    for(int i = 0; i < numTables; i++)
+                                        for(int j = 0; j < tables[i].numCols; j++)
+                                            if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
+                                                setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
                                 }
                             }
                         }
@@ -6257,13 +6330,10 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
         }
 
         printf("Would you like to add another where statement? (yes/no): ");
-        do {
-            fgetsUntil(yesno, MAX_LEN);
-            if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-                printf("Please input 'yes' or 'no': ");
-        } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-        if(strcmp(yesno, "yes") == 0) {
+        strcpy(yesno, yesnoInput());
+
+        if(isYes(yesno)) {
             *connectiveList = realloc(*connectiveList, sizeof(char) * (numWheres + 1));
             printf("Please input the connective to connect the where statement\nyou just made with the new one you're going to make. ('&' or '|'): ");
             do {
@@ -6274,7 +6344,7 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
                     printf("Invalid connective, try again: ");
             } while((*connectiveList)[numWheres] != '&' && (*connectiveList)[numWheres] != '|');
         }
-    } while(strcmp(yesno, "yes") == 0);
+    } while(isYes(yesno));
 
     return numWheres;
 }
@@ -7150,14 +7220,8 @@ int stringToType(char* type) {
 int verifyDelete(void) {
 
     printf("Are you sure you wish do delete this data? (yes/no): ");
-    char yesno[MAX_LEN];
-    do {
-        fgetsUntil(yesno, MAX_LEN);
-        if(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0)
-            printf("Please input 'yes' or 'no': ");
-    } while(strcmp(yesno, "no") != 0 && strcmp(yesno, "yes") != 0);
 
-    return strcmp(yesno, "yes") == 0;
+    return isYes(yesnoInput());
 
 }
 
@@ -7203,6 +7267,38 @@ void checkColumnNames(Table table, char* nameToCheck, int newNameIndex) {
             i = 0;
         }
     }
+}
+
+char* yesnoInput(void) {
+    static char yesno[MAX_LEN];
+
+    do {
+        fgetsUntil(yesno, MAX_LEN);
+        if(!isYes(yesno) && !isNo(yesno))
+            printf("Please input 'yes' or 'no': ");
+    } while(!isYes(yesno) && !isNo(yesno));
+
+    return yesno;
+}
+
+int isYes(char* yesno) {
+    for(int i = 0; i < strlen(yesno); i++)
+        yesno[i] = tolower(yesno[i]);
+
+    if(strcmp(yesno, "yes") == 0 || strcmp(yesno, "y") == 0)
+        return 1;
+
+    return 0;
+}
+
+int isNo(char* yesno) {
+    for(int i = 0; i < strlen(yesno); i++)
+        yesno[i] = tolower(yesno[i]);
+
+    if(strcmp(yesno, "no") == 0 || strcmp(yesno, "n") == 0)
+        return 1;
+
+    return 0;
 }
 
 void fgetsUntil(char* string, int size) {

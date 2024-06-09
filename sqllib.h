@@ -155,6 +155,9 @@ int* actionMenu(Table* table); //Implemented
 int tableMenu(int numTables, Table* tableList); //Implemented
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList); //Implemented
 int typeInput(void); //Implemented
+char* yesnoInput(void); //Implemented
+int isYes(char* yesno); //Implemented
+int isNo(char* yesno); //Implemented
 int colPosInput(int** colNums, int numCols); //Implemented
 int rowNumInput(int** rowNums, int numRows); //Implemented
 void attrInputByCol(Column* col); //Implemented
@@ -167,6 +170,7 @@ int stringToType(char* type); //Implemented
 int endsWith(char* str, char* ext); //Implemented
 char* addQuotesToString(char* string); //Implemented
 char* removeQuotesFromString(char* string); //Implemented
+void shrinkSpaces(char** string); //Implemented
 
 int getRowIndex(Table table, char* colName, void* value);
 Table copyTable(Table table); //Implemented

@@ -14,7 +14,6 @@ Execute the program with ./cql
 ## Visuals
 
 ## Roadmap
-- Allow for the user to input Yes, yes, y, YES all for an input of yes. And the same for no.
 - Prohibit name inputs with keyworks like 'COUNT' or 'AVG' or 'sqlite3_MASTER' or '*' or '.'
 - Add 'back' or 'cancel' option to nearly every stage of user input.
 - Extra CHAR comparisons (Contains, starts with, ends with).
@@ -39,6 +38,8 @@ If I feel like it:
 - Adding DATE datatype support.
 - Adding BLOB datatype support.
 - More in-depth auto increment settings.
+- More WHERE comparisons.
+- More Aggregate Functions.
 - Foreign Key functionality.
 - Undo feature.
 
