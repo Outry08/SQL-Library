@@ -95,6 +95,11 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
 
     Table table;
 
+    if(!checkInvalidName(tableName)) {
+        printf("INVALID TABLE NAME\n");
+        return table;
+    }
+
     table.name = strdup(tableName);
     table.numCols = numCols;
     table.numRows = 0;
@@ -104,6 +109,8 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
         table.cols = malloc(sizeof(Column) * numCols);
 
     for(int i = 0; i < numCols; i++) {
+        if(!checkInvalidName(colNames[i]))
+            continue;
         table.cols[i].name = strdup(colNames[i]);
         table.cols[i].type = colTypes[i];
         table.cols[i].numRows = 0;
@@ -566,6 +573,11 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
 
 void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName) {
 
+    if(!checkInvalidName(colName)) {
+        printf("Error: Invalid character/string in provided column name.\n");
+        return;
+    }
+
     table->numCols++;
     if(table->numCols > 1)
         table->cols = realloc(table->cols, sizeof(Column) * table->numCols);
@@ -616,11 +628,17 @@ void insertCol(Table* table, char* colName, int colType, int numValues, int* row
 
     if(table->cols[table->numCols - 1].isPrimaryKey)
         deleteDuplicateValues(&table->cols[table->numCols - 1]);
-    checkColumnNames(*table, table->cols[table->numCols - 1].name, table->numCols - 1);
+    checkDupColumnNames(*table, table->cols[table->numCols - 1].name, table->numCols - 1);
 
 }
 
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName, char* colPos) {
+
+    if(!checkInvalidName(colName)) {
+        printf("Error: Invalid character/string in provided column name.\n");
+        return;
+    }
+
     int colNum = letterToInt(colPos) - 1;
     if(colNum < 0 || colNum > table->numCols) {
         printf("Error: Invalid column position provided. Inserting into the end of table.\n");
@@ -683,7 +701,7 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
 
     if(table->cols[colNum].isPrimaryKey)
         deleteDuplicateValues(&table->cols[colNum]);
-    checkColumnNames(*table, table->cols[colNum].name, colNum);
+    checkDupColumnNames(*table, table->cols[colNum].name, colNum);
 
 }
 
@@ -1321,7 +1339,11 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
             char* colName = getColNameFromAggregate(colNames[i]);
 
             newTable.cols[i + extraOffset].values = malloc(sizeof(Value) * newTable.numRows);
-            newTable.cols[i + extraOffset].name = strdup(colNames[i]);
+            newTable.cols[i + extraOffset].name = malloc(sizeof(char) * MAX_LEN);
+            strcpy(newTable.cols[i + extraOffset].name, getAggregateName(colNames[i]));
+            strcat(newTable.cols[i + extraOffset].name, " of ");
+            strcat(newTable.cols[i + extraOffset].name, colName);
+
             newTable.cols[i + extraOffset].type = nameToCol(&baseTable, colName, NULL).type;
 
             char* aggregateName = getAggregateName(colNames[i]);
@@ -1476,7 +1498,7 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
     }
 
     for(int i = newTable.numCols - 1; i >= 0; i--) {
-        checkColumnNames(newTable, newTable.cols[i].name, i);
+        checkDupColumnNames(newTable, newTable.cols[i].name, i);
     }
 
     return newTable;
@@ -2254,8 +2276,7 @@ char* oppComp(char* comparison) {
 }
 
 int isAggregate(char* name) {
-    return strstr(name, "COUNT(") || strstr(name, "SUM(") || strstr(name, "AVG(") || strstr(name, "MAX(") || strstr(name, "MIN(")
-        || !strcmp(name, "COUNT") || !strcmp(name, "SUM") || !strcmp(name, "AVG") || !strcmp(name, "MAX") || !strcmp(name, "MIN");
+    return strstr(name, "COUNT(") || strstr(name, "SUM(") || strstr(name, "AVG(") || strstr(name, "MAX(") || strstr(name, "MIN(");
 }
 
 char* getAggregateName(char* name) {
@@ -3720,7 +3741,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
         }
         else {
             char* colName = strdup(strstr(temp, "(") + 1);
-            *strchr(colName, ')') = '\n';
+            *strchr(colName, ')') = '\0';
             strcpy(colName, removeQuotesFromString(colName));
             Column pCol = nameToCol(table, colName, NULL);
             assignColAttrs(&pCol, "P", NULL, NULL);
@@ -3853,9 +3874,13 @@ Table* userTableOperator(int numTables, Table* tables) {
                 // "1. CREATE a table"
 
                 printf("What is the name of your new table?: ");
-                fgetsUntil(tableName, MAX_LEN);
+                do {
+                    fgetsUntil(tableName, MAX_LEN);
+                    if(!checkInvalidName(tableName))
+                        printf("Please input a name without prohibited characters/words: ");
+                } while(!checkInvalidName(tableName));
 
-                checkTableNames(tables, numTables, tableName, numTables);
+                checkDupTableNames(tables, numTables, tableName, numTables);
 
                 numTables++;
                 if(numTables == 1)
@@ -3879,7 +3904,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                     for(int i = 0; i < numThings; i++) {
                         printf("Name for column #%d: ", i + 1);
                         nameList[i] = malloc(sizeof(char) * MAX_LEN);
-                        fgetsUntil(nameList[i], MAX_LEN);
+                        do {
+                            fgetsUntil(nameList[i], MAX_LEN);
+                            if(!checkInvalidName(nameList[i]))
+                                printf("Please input a name without prohibited characters/words: ");
+                        } while(!checkInvalidName(nameList[i]));
                         nameList[i] = realloc(nameList[i], sizeof(char) * (strlen(nameList[i]) + 1));
                         typeList[i] = typeInput();
                         attrList[i] = strdup(attrInputByType(typeList[i], &defaultValList[i], &foreignKeyList[i]));
@@ -4013,16 +4042,25 @@ Table* userTableOperator(int numTables, Table* tables) {
                             } while(column.type == -1);
 
                             printf("New name for column '%s': ", colName);
-                            fgetsUntil(column.name, MAX_LEN);
-                            checkColumnNames(*currentTable, column.name, colIndex);
+                            do {
+                                fgetsUntil(column.name, MAX_LEN);
+                                if(!checkInvalidName(column.name))
+                                    printf("Please input a name without prohibited characters/words: ");
+                            } while(!checkInvalidName(column.name));
+
+                            checkDupColumnNames(*currentTable, column.name, colIndex);
                             break;
                         }
 
                     case 2:
                         // "2. RENAME current table"
                         printf("New name for table '%s': ", currentTable->name);
-                        fgetsUntil(currentTable->name, MAX_LEN);
-                        checkTableNames(tables, numTables, currentTable->name, currTableIndex);
+                        do {
+                            fgetsUntil(currentTable->name, MAX_LEN);
+                            if(!checkInvalidName(currentTable->name))
+                                printf("Please input a name without prohibited characters/words: ");
+                        } while(!checkInvalidName(currentTable->name));
+                        checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
                 break;
@@ -4044,8 +4082,14 @@ Table* userTableOperator(int numTables, Table* tables) {
                 char* input;
                 sel.numCols = 0;
                 do {
-                    input = malloc(sizeof(char) * MAX_LEN);
 
+                    if(sel.numCols == 0)
+                        sel.colNames = malloc(sizeof(char*) * (sel.numCols + 1));
+                    else
+                        sel.colNames = realloc(sel.colNames, sizeof(char*) * (sel.numCols + 1));
+
+                    printf("0\n");
+                    input = malloc(sizeof(char) * MAX_LEN);
 
                     printf("Name for select column #%d", sel.numCols + 1);
                     if(sel.numCols > 0)
@@ -4065,10 +4109,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             break;
                     } while(1);
 
+                    printf("1\n");
+
                     if(strcmp(input, "\\f") != 0) {
                         sel.colNames[sel.numCols++] = strdup(input);
+                        printf("3\n");
+
                         free(input);
+                        printf("4\n");
+                        continue;
                     }
+                    printf("2\n");
 
                 } while(strcmp(input, "\\f") != 0);
 
@@ -4136,7 +4187,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                 whereList = NULL;
                 connectiveList = NULL;
 
-                checkTableNames(tables, numTables, currentTable->name, currTableIndex);
+                checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
 
                 break;
 
@@ -4305,7 +4356,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                         int colType;
 
                         printf("Please input the name of the new column: ");
-                        fgetsUntil(colName, MAX_LEN);
+                        do {
+                            fgetsUntil(colName, MAX_LEN);
+                            if(!checkInvalidName(colName))
+                                printf("Please input a name without prohibited characters/words: ");
+                        } while(!checkInvalidName(colName));
 
                         printf("What type should this column be?:\n");
                         colType = typeInput();
@@ -5022,7 +5077,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         currentTable = &tables[numTables - 1];
                         currTableIndex = numTables - 1;
 
-                        checkTableNames(tables, numTables, currentTable->name, currTableIndex);
+                        checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
 
@@ -5855,7 +5910,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 else
                                     tables = realloc(tables, sizeof(Table) * numTables);
                                 tables[numTables - 1] = *importedTable;
-                                checkTableNames(tables, numTables, tables[numTables - 1].name, numTables - 1);
+                                checkDupTableNames(tables, numTables, tables[numTables - 1].name, numTables - 1);
                                 currentTable = &tables[numTables - 1];
                                 currTableIndex = numTables - 1;
                                 for(int i = 0; i < numTables; i++)
@@ -7225,7 +7280,7 @@ int verifyDelete(void) {
 
 }
 
-void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex) {
+void checkDupTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex) {
     int numDupes = 0;
     char* nameSuffix;
 
@@ -7247,7 +7302,7 @@ void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNam
     }
 }
 
-void checkColumnNames(Table table, char* nameToCheck, int newNameIndex) {
+void checkDupColumnNames(Table table, char* nameToCheck, int newNameIndex) {
     int numDupes = 0;
     char* nameSuffix;
 
@@ -7267,6 +7322,62 @@ void checkColumnNames(Table table, char* nameToCheck, int newNameIndex) {
             i = 0;
         }
     }
+}
+
+int checkInvalidName(char* name) {
+
+    int numBadStrings = 8;
+
+    char** invalidStrings = malloc(sizeof(char*) * numBadStrings);
+    invalidStrings[0] = "count(";
+    invalidStrings[1] = "sum(";
+    invalidStrings[2] = "avg(";
+    invalidStrings[3] = "min(";
+    invalidStrings[4] = "max(";
+    invalidStrings[5] = "sqlite";
+    invalidStrings[6] = "*";
+    invalidStrings[7] = ".";
+
+    for(int i = 0; i < numBadStrings; i++)
+        if(containsIgnoreCase(name, invalidStrings[i]))
+            return 0;
+
+    return 1;
+}
+
+int equalsIgnoreCase(char* string1, char* string2) {
+    char temp1[MAX_LEN];
+    char temp2[MAX_LEN];
+
+    strcpy(temp1, string1);
+    strcpy(temp2, string2);
+
+    for(int i = 0; i < strlen(temp1); i++) {
+        temp1[i] = tolower(temp1[i]);
+    }
+    for(int i = 0; i < strlen(temp2); i++) {
+        temp2[i] = tolower(temp2[i]);
+    }
+
+    return strcmp(temp1, temp2) == 0;
+
+}
+
+int containsIgnoreCase(char* big, char* small) {
+    char tempBig[MAX_LEN];
+    char tempSmall[MAX_LEN];
+
+    strcpy(tempBig, big);
+    strcpy(tempSmall, small);
+
+    for(int i = 0; i < strlen(tempBig); i++) {
+        tempBig[i] = tolower(tempBig[i]);
+    }
+    for(int i = 0; i < strlen(tempSmall); i++) {
+        tempSmall[i] = tolower(tempSmall[i]);
+    }
+
+    return strstr(tempBig, tempSmall) != NULL;
 }
 
 char* yesnoInput(void) {

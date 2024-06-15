@@ -186,14 +186,17 @@ char* getColNameFromAggregate(char* name); //Implemented
 
 int verifyDelete(void); //Implemented
 
-void checkTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex); //Implemented
-void checkColumnNames(Table table, char* nameToCheck, int newNameIndex); //Implemented
+void checkDupTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex); //Implemented
+void checkDupColumnNames(Table table, char* nameToCheck, int newNameIndex); //Implemented
+int checkInvalidName(char* name); //Implemented
 
 void fgetsUntil(char* string, int size); //Implemented
 void scanfWell(char* formSpec, void* val); //Implemented
 void scanfWellNull(char* formSpec, void* val); //Implemented
 void cql_sleep(int milliseconds); //Implemented
 void* memdup(void* src, int numBytes);
+int equalsIgnoreCase(char* string1, char* string2); //Implemented
+int containsIgnoreCase(char* big, char* small); //Implemented
 
 /**
  * Communication with SQL Language

@@ -14,9 +14,7 @@ Execute the program with ./cql
 ## Visuals
 
 ## Roadmap
-- Prohibit name inputs with keyworks like 'COUNT' or 'AVG' or 'sqlite3_MASTER' or '*' or '.'
 - Add 'back' or 'cancel' option to nearly every stage of user input.
-- Extra CHAR comparisons (Contains, starts with, ends with).
 - Make SAVE & QUIT actually work.
 
 - Valgrind and fix all leaks.
@@ -42,6 +40,7 @@ If I feel like it:
 - More Aggregate Functions.
 - Foreign Key functionality.
 - Undo feature.
+- Extra CHAR comparisons (Contains, starts with, ends with).
 
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.
