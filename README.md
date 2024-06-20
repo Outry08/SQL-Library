@@ -15,7 +15,7 @@ Execute the program with ./cql
 
 ## Roadmap
 - Add 'back' or 'cancel' option to nearly every stage of user input.
-    - (Have done up to and including case 7)
+    - (Have done up to and including case 12)
 - Make SAVE & QUIT actually work.
 
 - Valgrind and fix all leaks.

@@ -4850,13 +4850,15 @@ Table* userTableOperator(int numTables, Table* tables) {
                 switch(menuChoices[1]) {
                     case 1:
                         // "1. MOVE a row to new position in current table"
-
-                        printf("Please input the number of the row you would like to move (1-%d): ", currentTable->numRows);
+                        printf("Please input the number of the row you would like to move (1-%d) (0 = cancel): ", currentTable->numRows);
                         do {
                             scanfWell("%d", &rowNum);
-                            if(--rowNum < 0 || rowNum > currentTable->numRows - 1)
-                                printf("Please input a number between 1 and %d: ", currentTable->numRows);
-                        } while(rowNum < 0 || rowNum > currentTable->numRows - 1);
+                            if(--rowNum < -1 || rowNum > currentTable->numRows - 1)
+                                printf("Please input a number between 1 and %d (0 = cancel): ", currentTable->numRows);
+                        } while(rowNum < -1 || rowNum > currentTable->numRows - 1);
+
+                        if(rowNum == -1)
+                            break;
 
                         if(currentTable->numRows > 1) {
 
@@ -4866,7 +4868,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                             do {
                                 scanfWell("%d", &newPos);
                                 if(--newPos < 0 || newPos > currentTable->numRows - 1)
-                                    printf("Please input a number between 1 and %d: ", currentTable->numRows);
+                                    printf("Please input a number between 1 and %d (0 = cancel): ", currentTable->numRows);
                             } while(newPos < 0 || newPos > currentTable->numRows - 1);
 
                             int nullDummy;
@@ -4919,19 +4921,16 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                     if(newPos > rowNum) {
                                         for(int j = rowNum; j < newPos; j++) {
-                                            printf("%s into %s\n", currentTable->cols[i].values[j + 1].val.CHAR, currentTable->cols[i].values[j].val.CHAR);
                                             currentTable->cols[i].values[j].val.CHAR = strdup(currentTable->cols[i].values[j + 1].val.CHAR);
                                             currentTable->cols[i].values[j].isNULL = currentTable->cols[i].values[j + 1].isNULL;
                                         }
                                     }
                                     else {
                                         for(int j = rowNum; j > newPos; j--) {
-                                            printf("%s into %s\n", currentTable->cols[i].values[j - 1].val.CHAR, currentTable->cols[i].values[j].val.CHAR);
                                             currentTable->cols[i].values[j].val.CHAR = strdup(currentTable->cols[i].values[j - 1].val.CHAR);
                                             currentTable->cols[i].values[j].isNULL = currentTable->cols[i].values[j - 1].isNULL;
                                         }
                                     }
-                                    printf("%s into %s\n", charDummy, currentTable->cols[i].values[newPos].val.CHAR);
                                     currentTable->cols[i].values[newPos].val.CHAR = strdup(charDummy);
 
                                 }
@@ -4970,13 +4969,22 @@ Table* userTableOperator(int numTables, Table* tables) {
                         if(currentTable->numCols > 1) {
                             char* colString = malloc(sizeof(char) * MAX_LEN);
                             int colPos;
-                            printf("Please input the position of the column you would like to move (A-%s): ", intToLetter(currentTable->numCols));
+                            printf("Please input the position of the column you would like to move (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
                             do {
                                 fgetsUntil(colString, MAX_LEN);
-                                colPos = letterToInt(colString) - 1;
-                                if(colPos < 0 || colPos >= currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                if(strcmp(colString, "\\x") != 0) {
+                                    colPos = letterToInt(colString) - 1;
+                                    if(colPos < 0 || colPos >= currentTable->numCols)
+                                        printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                }
+                                else
+                                    break;
                             } while(colPos < 0 || colPos >= currentTable->numCols);
+
+                            if(strcmp(colString, "\\x") == 0) {
+                                free(colString);
+                                break;
+                            }
 
                             int newPos;
 
@@ -5003,7 +5011,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printf("There's not more than one column in this table. No movement necessary.\n");
 
                         break;
-
                 }
                 break;
 
@@ -5014,10 +5021,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                     break;
                 }
                 if(currentTable == NULL) {
-                    if(menuChoices[1] == 1)
-                        printf("Which table would you like to paste a row into?\n");
-                    else if(menuChoices[1] == 2)
-                        printf("Which table would you like to paste a column into?\n");
+                    printf("Which table would you like to sort?\n");
 
                     int tempIndex = tableMenu(numTables, tables);
                     if(tempIndex > -1) {
@@ -5031,34 +5035,41 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
 
                 // "1. SORT rows by the values of a column"
-                printf("Please input the name of the column you would like to sort by: ");
+                printf("Please input the name of the column you would like to sort by ('\\x' == cancel): ");
 
                 int colIndex;
                 do {
                     fgetsUntil(colName, MAX_LEN);
-                    nameToCol(currentTable, colName, &colIndex);
-                    if(colIndex == -1)
-                        printf("That column does not exist. Please try again: ");
+                    if(strcmp(colName, "\\x") != 0) {
+                        nameToCol(currentTable, colName, &colIndex);
+                        if(colIndex == -1)
+                            printf("That column does not exist. Please try again: ");
+                    }
+                    else
+                        break;
                 } while(colIndex == -1);
+
+                if(strcmp(colName, "\\x") == 0)
+                    break;
 
                 char ascdesc[MAX_LEN];
                 int ascending = 1;
                 printf("Would you like the data to be ascending ('asc') or descending ('desc'): ");
                 do {
                     fgetsUntil(ascdesc, MAX_LEN);
-                    if(strcmp(ascdesc, "asc") != 0 && strcmp(ascdesc, "desc") != 0)
+                    if(!equalsIgnoreCase(ascdesc, "asc") && !equalsIgnoreCase(ascdesc, "desc") && !equalsIgnoreCase(ascdesc, "a") && !equalsIgnoreCase(ascdesc, "d"))
                         printf("Please input 'asc' or 'desc': ");
-                } while(strcmp(ascdesc, "asc") != 0 && strcmp(ascdesc, "desc") != 0);
+                } while(!equalsIgnoreCase(ascdesc, "asc") && !equalsIgnoreCase(ascdesc, "desc") && !equalsIgnoreCase(ascdesc, "a") && !equalsIgnoreCase(ascdesc, "d"));
 
-                if(strcmp(ascdesc, "desc") == 0)
+                if(equalsIgnoreCase(ascdesc, "desc") || equalsIgnoreCase(ascdesc, "d"))
                     ascending = 0;
 
                 sortTableByCol(currentTable, colName, ascending);
-
                 break;
 
             case 10:
                 //"10. JOIN"
+                printf("JOIN functionality not yet implemented.\n");
                 break;
 
             case 11:
@@ -5069,10 +5080,12 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
                 if(currentTable == NULL) {
                     if(menuChoices[1] == 1)
-                        printf("Which table would you like to copy a row from?\n");
+                        printf("Which table would you like to copy a value from?\n");
                     else if(menuChoices[1] == 2)
-                        printf("Which table would you like to copy a column from?\n");
+                        printf("Which table would you like to copy a row from?\n");
                     else if(menuChoices[1] == 3)
+                        printf("Which table would you like to copy a column from?\n");
+                    else if(menuChoices[1] == 4)
                         printf("Which table would you like to copy?\n");
 
                     int tempIndex = tableMenu(numTables, tables);
@@ -5090,23 +5103,36 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                     case 1: {
                         // "1. COPY a value in current table"
-
                         char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
-                        printf("Please input the column position of the value you would like to copy. (A-%s): ", intToLetter(currentTable->numCols));
+                        printf("Please input the column position of the value you would like to copy. (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
                         do {
                             fgetsUntil(colString, MAX_LEN);
-                            colPos = letterToInt(colString) - 1;
-                            if(colPos < 0 || colPos >= currentTable->numCols)
-                                printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                            if(strcmp(colString, "\\x") != 0) {
+                                colPos = letterToInt(colString) - 1;
+                                if(colPos < 0 || colPos >= currentTable->numCols)
+                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                            }
+                            else
+                                break;
                         } while(colPos < 0 || colPos >= currentTable->numCols);
 
-                        printf("Please input the row number of the value you would like to copy. (1-%d): ", currentTable->numRows);
+                        if(strcmp(colString, "\\x") == 0) {
+                            free(colString);
+                            break;
+                        }
+
+                        printf("Please input the row number of the value you would like to copy. (1-%d) (0 = cancel): ", currentTable->numRows);
                         do {
                             scanfWell("%d", &rowNum);
-                            if(--rowNum < 0 || rowNum > currentTable->numRows - 1)
-                                printf("Please input a number between 1 and %d: ", currentTable->numRows);
-                        } while(rowNum < 0 || rowNum > currentTable->numRows - 1);
+                            if(--rowNum < -1 || rowNum > currentTable->numRows - 1)
+                                printf("Please input a number between 1 and %d (0 = cancel): ", currentTable->numRows);
+                        } while(rowNum < -1 || rowNum > currentTable->numRows - 1);
+
+                        if(rowNum == -1) {
+                            free(colString);
+                            break;
+                        }
 
                         if(valCopy != NULL) {
                             free(valCopy);
@@ -5154,12 +5180,15 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                     case 2:
                         // "2. COPY row in current table"
-                        printf("Which row would you like to copy? (1-%d): ", currentTable->numRows);
+                        printf("Which row would you like to copy? (1-%d) (0 = cancel): ", currentTable->numRows);
                         do {
                             scanfWell("%d", &rowNum);
-                            if(--rowNum < 0 || rowNum > currentTable->numRows - 1)
-                                printf("Please input a number between 1 and %d: ", currentTable->numRows);
-                        } while(rowNum < 0 || rowNum > currentTable->numRows - 1);
+                            if(--rowNum < -1 || rowNum > currentTable->numRows - 1)
+                                printf("Please input a number between 1 and %d (0 = cancel): ", currentTable->numRows);
+                        } while(rowNum < -1 || rowNum > currentTable->numRows - 1);
+
+                        if(rowNum == -1)
+                            break;
 
                         rowCopy = copyRow(currentTable, rowNum);
                         rowCopyLength = currentTable->numCols;
@@ -5173,13 +5202,22 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "3. COPY column in current table"
                         char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
-                        printf("Please input the position of the column you would like to copy. (A-%s): ", intToLetter(currentTable->numCols));
+                        printf("Please input the position of the column you would like to copy. (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
                         do {
                             fgetsUntil(colString, MAX_LEN);
-                            colPos = letterToInt(colString) - 1;
-                            if(colPos < 0 || colPos >= currentTable->numCols)
-                                printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                            if(strcmp(colString, "\\x") != 0) {
+                                colPos = letterToInt(colString) - 1;
+                                if(colPos < 0 || colPos >= currentTable->numCols)
+                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                            }
+                            else
+                                break;
                         } while(colPos < 0 || colPos >= currentTable->numCols);
+
+                        if(strcmp(colString, "\\x") == 0) {
+                            free(colString);
+                            break;
+                        }
 
                         colCopy = copyColumn(currentTable->cols[colPos]);
 
@@ -5206,8 +5244,8 @@ Table* userTableOperator(int numTables, Table* tables) {
                         checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
-
                 break;
+
             case 12:
                 //"12. PASTE"
                 if(numTables <= 0) {
@@ -5216,8 +5254,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
                 if(currentTable == NULL) {
                     if(menuChoices[1] == 1)
-                        printf("Which table would you like to paste a row into?\n");
+                        printf("Which table would you like to paste a value into?\n");
                     else if(menuChoices[1] == 2)
+                        printf("Which table would you like to paste a row into?\n");
+                    else if(menuChoices[1] == 3)
                         printf("Which table would you like to paste a column into?\n");
 
                     int tempIndex = tableMenu(numTables, tables);
@@ -5235,146 +5275,182 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                     case 1:
                         // "1. PASTE copied value into current table"
-                        printf("How would you like to select the positions to be pasted into?\n");
-                        printf("1. Using column names and a where statement\n");
-                        printf("2. Using the coordinate system (column letters and row numbers)\n");
-                        printf("Choice: ");
-                        do {
-                            scanfWell("%d", &menuChoices[1]);
-                            if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                                printf("Please input either 1 or 2: ");
-                        } while(menuChoices[1] < 1 || menuChoices[1] > 2);
-
-                        if(menuChoices[1] == 1) {
-                            int numUpdCols = 0;
+                        if(valCopy != NULL) {
+                            printf("How would you like to select the positions to be pasted into?\n");
+                            printf("1. Using column names and a where statement\n");
+                            printf("2. Using the coordinate system (column letters and row numbers)\n");
+                            printf("0. Cancel\n");
+                            printf("Choice: ");
                             do {
-                                numUpdCols++;
-                                printf("Please input the name of a column you would like to update the value(s) of: ");
-                                if(numUpdCols == 1) {
-                                    nameList = malloc(sizeof(char*) * 1);
-                                    valueList = malloc(sizeof(void*) * 1);
-                                }
-                                else {
-                                    nameList = realloc(nameList, sizeof(char*) * numUpdCols);
-                                    valueList = realloc(valueList, sizeof(void*) * numUpdCols);
-                                }
+                                scanfWell("%d", &menuChoices[1]);
+                                if(menuChoices[1] < 0 || menuChoices[1] > 2)
+                                    printf("Please input either 1 or 2 (or 0 to cancel): ");
+                            } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                                nameList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
-
-                                int colIndex;
-
-                                Column tempCol;
+                            if(menuChoices[1] == 0)
+                                break;
+                            else if(menuChoices[1] == 1) {
+                                int numUpdCols = 0;
+                                int breakTime = 0;
                                 do {
-                                    fgetsUntil(nameList[numUpdCols - 1], MAX_LEN);
-                                    tempCol = nameToCol(currentTable, nameList[numUpdCols - 1], &colIndex);
-                                    if(colIndex == -1)
-                                        printf("That column does not exist. Please try again: ");
-                                    else if(tempCol.type != valCopyType) {
-                                        printf("That column does not match the type of your copied value. Please enter columns of type '");
-                                        printType(valCopyType);
-                                        printf("': ");
+                                    numUpdCols++;
+                                    printf("Please input the name of a column you would like to update the value(s) of ('\\x' = cancel): ");
+                                    if(numUpdCols == 1) {
+                                        nameList = malloc(sizeof(char*) * 1);
+                                        valueList = malloc(sizeof(void*) * 1);
                                     }
-                                } while(colIndex == -1 || tempCol.type != valCopyType);
-                                nameList[numUpdCols - 1] = realloc(nameList[numUpdCols - 1], sizeof(char) * (strlen(nameList[numUpdCols - 1]) + 1));
+                                    else {
+                                        nameList = realloc(nameList, sizeof(char*) * numUpdCols);
+                                        valueList = realloc(valueList, sizeof(void*) * numUpdCols);
+                                    }
 
-                                if(valCopyType == INTEGER || valCopyType == BOOL) {
-                                    valueList[numUpdCols - 1] = malloc(sizeof(int));
-                                    memcpy(valueList[numUpdCols - 1], valCopy, sizeof(int));
-                                }
-                                else if(valCopyType == CHAR) {
-                                    valueList[numUpdCols - 1] = strdup(valCopy);
-                                }
-                                else if(valCopyType == DECIMAL) {
-                                    valueList[numUpdCols - 1] = malloc(sizeof(double));
-                                    memcpy(valueList[numUpdCols - 1], valCopy, sizeof(double));
-                                }
-                                else if(valCopyType == DATE) {
-                                    printf("DATE datatype functionality coming soon.\n");
-                                }
-                                else {
-                                    valueList[numUpdCols - 1] = NULL;
-                                }
+                                    nameList[numUpdCols - 1] = malloc(sizeof(char) * MAX_LEN);
 
-                                if(numUpdCols + 1 <= currentTable->numCols) {
-                                    printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                    int colIndex;
+
+                                    Column tempCol;
+                                    do {
+                                        fgetsUntil(nameList[numUpdCols - 1], MAX_LEN);
+                                        if(strcmp(nameList[numUpdCols - 1], "\\x") != 0) {
+                                            tempCol = nameToCol(currentTable, nameList[numUpdCols - 1], &colIndex);
+                                            if(colIndex == -1)
+                                                printf("That column does not exist. Please try again: ");
+                                            else if(tempCol.type != valCopyType) {
+                                                printf("That column does not match the type of your copied value. Please enter columns of type '");
+                                                printType(valCopyType);
+                                                printf("': ");
+                                            }
+                                        }
+                                        else
+                                            break;
+                                    } while(colIndex == -1 || tempCol.type != valCopyType);
+
+                                    if(strcmp(nameList[numUpdCols - 1], "\\x") == 0) {
+                                        for(int i = 0; i < numUpdCols; i++) {
+                                            if(nameList[i] != NULL)
+                                                free(nameList[i]);
+                                            if(valueList[i] != NULL)
+                                                free(valueList[i]);
+                                        }
+                                        free(nameList);
+                                        free(valueList);
+                                        nameList = NULL;
+                                        valueList = NULL;
+                                        breakTime = 1;
+                                        break;
+                                    }
+
+                                    nameList[numUpdCols - 1] = realloc(nameList[numUpdCols - 1], sizeof(char) * (strlen(nameList[numUpdCols - 1]) + 1));
+
+                                    if(valCopyType == INTEGER || valCopyType == BOOL) {
+                                        valueList[numUpdCols - 1] = malloc(sizeof(int));
+                                        memcpy(valueList[numUpdCols - 1], valCopy, sizeof(int));
+                                    }
+                                    else if(valCopyType == CHAR) {
+                                        valueList[numUpdCols - 1] = strdup(valCopy);
+                                    }
+                                    else if(valCopyType == DECIMAL) {
+                                        valueList[numUpdCols - 1] = malloc(sizeof(double));
+                                        memcpy(valueList[numUpdCols - 1], valCopy, sizeof(double));
+                                    }
+                                    else if(valCopyType == DATE) {
+                                        printf("DATE datatype functionality coming soon.\n");
+                                    }
+                                    else {
+                                        valueList[numUpdCols - 1] = NULL;
+                                    }
+
+                                    if(numUpdCols + 1 <= currentTable->numCols) {
+                                        printf("Would you like to add another column to have its values updated? (yes/no): ");
+                                    }
+
+                                } while(isYes(yesnoInput()) && numUpdCols + 1 <= currentTable->numCols);
+
+                                if(breakTime)
+                                    break;
+
+                                numWheres = whereInput(currentTable, &whereList, &connectiveList);
+
+                                update(currentTable, numUpdCols, nameList, valueList, numWheres, whereList, connectiveList);
+
+                                for(int i = 0; i < numUpdCols; i++) {
+                                    if(nameList[i] != NULL)
+                                        free(nameList[i]);
+                                    if(valueList[i] != NULL)
+                                        free(valueList[i]);
                                 }
-
-                            } while(isYes(yesnoInput()) && numUpdCols + 1 <= currentTable->numCols);
-
-                            numWheres = whereInput(currentTable, &whereList, &connectiveList);
-
-                            update(currentTable, numUpdCols, nameList, valueList, numWheres, whereList, connectiveList);
-
-                            for(int i = 0; i < numUpdCols; i++) {
-                                if(nameList[i] != NULL)
-                                    free(nameList[i]);
-                                if(valueList[i] != NULL)
-                                    free(valueList[i]);
+                                free(nameList);
+                                free(valueList);
+                                nameList = NULL;
+                                valueList = NULL;
                             }
-                            free(nameList);
-                            free(valueList);
-                            nameList = NULL;
-                            valueList = NULL;
-                        }
-                        else {
-                            int* colNums = NULL;
-                            int numColsChosen = 0;
+                            else {
+                                int* colNums = NULL;
+                                int numColsChosen = 0;
 
-                            numColsChosen = colPosInput(&colNums, currentTable->numCols);
-
-                            int* rowNums = NULL;
-                            int numRowsChosen = 0;
-
-                            numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
-                            for(int i = 0; i < numColsChosen; i++) {
-                                if(valCopyType == INTEGER && currentTable->cols[colNums[i]].type == INTEGER) {
-                                    for(int j = 0; j < numRowsChosen; j++) {
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.INTEGER = *(int*)valCopy;
-                                    }
-                                }
-                                else if(valCopyType == CHAR && currentTable->cols[colNums[i]].type == CHAR) {
-                                    for(int j = 0; j < numRowsChosen; j++) {
-                                        if(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR != NULL)
-                                            free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR = strdup((char*)valCopy);
-                                    }
-                                }
-                                else if(valCopyType == DECIMAL && currentTable->cols[colNums[i]].type == DECIMAL) {
-                                    for(int j = 0; j < numRowsChosen; j++) {
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.DECIMAL = *(double*)valCopy;
-                                    }
-                                }
-                                else if(valCopyType == BOOL && currentTable->cols[colNums[i]].type == BOOL) {
-                                    for(int j = 0; j < numRowsChosen; j++) {
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].val.BOOL = *(int*)valCopy;
-                                    }
-                                }
-                                else if(valCopyType == DATE && currentTable->cols[colNums[i]].type == DATE) {
-                                    printf("DATE datatype functionality coming soon.\n");
-                                }
-                                else if(valCopyType == -1) {
-                                    for(int j = 0; j < numRowsChosen; j++) {
-                                        currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 1;
-                                    }
+                                numColsChosen = colPosInput(&colNums, currentTable->numCols);
+                                if(numColsChosen == -1) {
+                                    if(colNums != NULL)
+                                        free(colNums);
+                                    break;
                                 }
 
-                                if(currentTable->cols[colNums[i]].isPrimaryKey)
-                                    deleteDuplicateValues(&currentTable->cols[colNums[i]]);
-                                if(currentTable->cols[colNums[i]].hasForeignKey)
-                                    deleteInvalidFKeyVals(&currentTable->cols[colNums[i]]);
+                                int* rowNums = NULL;
+                                int numRowsChosen = 0;
+
+                                numRowsChosen = rowNumInput(&rowNums, currentTable->numRows);
+                                for(int i = 0; i < numColsChosen; i++) {
+                                    if(valCopyType == INTEGER && currentTable->cols[colNums[i]].type == INTEGER) {
+                                        for(int j = 0; j < numRowsChosen; j++) {
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].val.INTEGER = *(int*)valCopy;
+                                        }
+                                    }
+                                    else if(valCopyType == CHAR && currentTable->cols[colNums[i]].type == CHAR) {
+                                        for(int j = 0; j < numRowsChosen; j++) {
+                                            if(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR != NULL)
+                                                free(currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR);
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].val.CHAR = strdup((char*)valCopy);
+                                        }
+                                    }
+                                    else if(valCopyType == DECIMAL && currentTable->cols[colNums[i]].type == DECIMAL) {
+                                        for(int j = 0; j < numRowsChosen; j++) {
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].val.DECIMAL = *(double*)valCopy;
+                                        }
+                                    }
+                                    else if(valCopyType == BOOL && currentTable->cols[colNums[i]].type == BOOL) {
+                                        for(int j = 0; j < numRowsChosen; j++) {
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 0;
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].val.BOOL = *(int*)valCopy;
+                                        }
+                                    }
+                                    else if(valCopyType == DATE && currentTable->cols[colNums[i]].type == DATE) {
+                                        printf("DATE datatype functionality coming soon.\n");
+                                    }
+                                    else if(valCopyType == -1) {
+                                        for(int j = 0; j < numRowsChosen; j++) {
+                                            currentTable->cols[colNums[i]].values[rowNums[j]].isNULL = 1;
+                                        }
+                                    }
+
+                                    if(currentTable->cols[colNums[i]].isPrimaryKey)
+                                        deleteDuplicateValues(&currentTable->cols[colNums[i]]);
+                                    if(currentTable->cols[colNums[i]].hasForeignKey)
+                                        deleteInvalidFKeyVals(&currentTable->cols[colNums[i]]);
+
+                                }
+
+                                if(colNums != NULL)
+                                    free(colNums);
+                                if(rowNums != NULL)
+                                    free(rowNums);
 
                             }
-
-                            if(colNums != NULL)
-                                free(colNums);
-                            if(rowNums != NULL)
-                                free(rowNums);
-
                         }
+                        else
+                            printf("You currently do not have a value copied.\n");
                         break;
 
                     case 2:
@@ -5529,15 +5605,25 @@ Table* userTableOperator(int numTables, Table* tables) {
                                     printf("How would you like to paste?:\n");
                                     printf("1. Shrink row to fit table\n"
                                         "2. Grow table to fit row\n"
+                                        "0. Cancel pasting\n"
                                         "Your choice: ");
 
                                     do {
                                         scanfWell("%d", &menuChoices[1]);
-                                        if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                        if(menuChoices[1] < 0 || menuChoices[1] > 2)
                                             printf("Please choose between 1 and %d: ", 2);
-                                    } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                                    } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                                    if(menuChoices[1] == 2) {
+                                    if(menuChoices[1] == 0) {
+                                        if(valueList != NULL) {
+                                            for(int i = 0; i < currentTable->numCols; i++)
+                                                free(valueList[i]);
+                                            free(valueList);
+                                        }
+                                        valueList = NULL;
+                                        break;
+                                    }
+                                    else if(menuChoices[1] == 2) {
                                         int numColsNeeded = rowCopyLength - currentTable->numCols;
                                         printf("You need %d extra columns.\n", numColsNeeded);
 
@@ -5555,19 +5641,19 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                             if(proceed) {
                                 if(currentTable->numRows > 0) {
-                                    printf("Which row would you like to paste into? (1-%d): ", currentTable->numRows + 1);
+                                    printf("Which row would you like to paste into? (1-%d) (0 = cancel): ", currentTable->numRows + 1);
                                     do {
                                         scanfWell("%d", &rowNum);
-                                        if(rowNum < 1 || rowNum > currentTable->numRows + 1)
-                                            printf("Please input a valid row number. (1-%d): ", currentTable->numRows + 1);
-                                    } while(rowNum < 1 || rowNum > currentTable->numRows + 1);
+                                        if(rowNum < 0 || rowNum > currentTable->numRows + 1)
+                                            printf("Please input a valid row number. (1-%d) (0 = cancel): ", currentTable->numRows + 1);
+                                    } while(rowNum < 0 || rowNum > currentTable->numRows + 1);
 
-                                    insertIntoRow(currentTable, currentTable->numCols, nameList, valueList, rowNum);
+                                    if(rowNum > 0)
+                                        insertIntoRow(currentTable, currentTable->numCols, nameList, valueList, rowNum);
                                 }
                                 else
                                     insertRow(currentTable, currentTable->numCols, nameList, valueList);
                             }
-
                             else
                                 printf("The current ordering of datatypes in your copied row does not match the ordering of datatypes in your current table.\nPasting not possible.\n");
 
@@ -5588,15 +5674,18 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 printf("How would you like to paste?:\n");
                                 printf("1. Shrink column to fit table\n"
                                     "2. Grow table to fit column\n"
+                                    "0. Cancel"
                                     "Your choice: ");
 
                                 do {
                                     scanfWell("%d", &menuChoices[1]);
-                                    if(menuChoices[1] < 1 || menuChoices[1] > 2)
+                                    if(menuChoices[1] < 0 || menuChoices[1] > 2)
                                         printf("Please choose between 1 and %d: ", 2);
-                                } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                                } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                                if(menuChoices[1] == 2) {
+                                if(menuChoices[1] == 0)
+                                    break;
+                                else if(menuChoices[1] == 2) {
                                     int numRowsMissing = colCopy.numRows - currentTable->numRows;
                                     for(int i = 0; i < numRowsMissing; i++)
                                         insertRow(currentTable, 0, NULL, NULL);
@@ -5678,15 +5767,20 @@ Table* userTableOperator(int numTables, Table* tables) {
                             char colString[MAX_LEN];
                             int colPos;
 
-                            printf("Which column position would you like to insert into? (A-%s): ", intToLetter(currentTable->numCols + 1));
+                            printf("Which column position would you like to insert into? (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols + 1));
                             do {
                                 fgetsUntil(colString, MAX_LEN);
-                                colPos = letterToInt(colString) - 1;
-                                if(colPos < 0 || colPos > currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols + 1));
+                                if(strcmp(colString, "\\x") != 0) {
+                                    colPos = letterToInt(colString) - 1;
+                                    if(colPos < 0 || colPos > currentTable->numCols)
+                                        printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols + 1));
+                                }
+                                else
+                                    break;
                             } while(colPos < 0 || colPos > currentTable->numCols);
 
-                            insertIntoCol(currentTable, colCopy.name, colCopy.type, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
+                            if(strcmp(colString, "\\x") != 0)
+                                insertIntoCol(currentTable, colCopy.name, colCopy.type, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
 
                             if(valueList != NULL) {
                                 for(int i = 0; i < numThings; i++)
@@ -5711,7 +5805,6 @@ Table* userTableOperator(int numTables, Table* tables) {
                 break;
             case 13:
                 //"13. DELETE"
-
                 if(numTables <= 0) {
                     printf("There are no tables to choose from.\n");
                     break;
