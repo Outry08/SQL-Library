@@ -5840,14 +5840,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printf("How would you like to select the values to be updated?\n");
                             printf("1. Using column names and a where statement\n");
                             printf("2. Using the coordinate system (row numbers)\n");
+                            printf("0. Cancel\n");
                             printf("Choice: ");
                             do {
                                 scanfWell("%d", &menuChoices[1]);
-                                if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                                    printf("Please input either 1 or 2: ");
-                            } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                                if(menuChoices[1] < 0 || menuChoices[1] > 2)
+                                    printf("Please input either 0, 1, or 2: ");
+                            } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                            if(menuChoices[1] == 1) {
+                            if(menuChoices[1] == 0)
+                                break;
+                            else if(menuChoices[1] == 1) {
                                 numWheres = whereInput(currentTable, &whereList, &connectiveList);
 
                                 if(verifyDelete())
@@ -5878,14 +5881,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printf("How would you like to select the values to be updated?\n");
                             printf("1. Using a column name\n");
                             printf("2. Using the coordinate system (column letters)\n");
+                            printf("0. Cancel\n");
                             printf("Choice: ");
                             do {
                                 scanfWell("%d", &menuChoices[1]);
-                                if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                                    printf("Please input either 1 or 2: ");
-                            } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                                if(menuChoices[1] < 0 || menuChoices[1] > 2)
+                                    printf("Please input either 0, 1, or 2: ");
+                            } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                            if(menuChoices[1] == 1) {
+                            if(menuChoices[1] == 0)
+                                break;
+                            else if(menuChoices[1] == 1) {
 
                                 printf("Please input the name of the column you would like to delete: ");
 
@@ -5929,14 +5935,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             printf("How would you like to select the values to be deleted?\n");
                             printf("1. Using column names and a where statement\n");
                             printf("2. Using the coordinate system (column letters and row numbers)\n");
+                            printf("0. Cancel\n");
                             printf("Choice: ");
                             do {
                                 scanfWell("%d", &menuChoices[1]);
-                                if(menuChoices[1] < 1 || menuChoices[1] > 2)
-                                    printf("Please input either 1 or 2: ");
-                            } while(menuChoices[1] < 1 || menuChoices[1] > 2);
+                                if(menuChoices[1] < 0 || menuChoices[1] > 2)
+                                    printf("Please input either 0, 1, or 2: ");
+                            } while(menuChoices[1] < 0 || menuChoices[1] > 2);
 
-                            if(menuChoices[1] == 1) {
+                            if(menuChoices[1] == 0)
+                                break;
+                            else if(menuChoices[1] == 1) {
                                 int numDelCols = 0;
                                 do {
                                     numDelCols++;
@@ -6032,7 +6041,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         for(int i = 0; i < numTables; i++) {
                             if(strstr(tables[i].name, "Selected from")) {
                                 found = 1;
-                                if(verified == 0 || verifyDelete()) {
+                                if(verified == 1 || verifyDelete()) {
                                     verified = 1;
                                     freeTable(&tables[i]);
 
@@ -6064,7 +6073,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         for(int i = 0; i < numTables; i++) {
                             if(strstr(tables[i].name, "Copy of")) {
                                 found = 1;
-                                if(verified == 0 || verifyDelete()) {
+                                if(verified == 1 || verifyDelete()) {
                                     verified = 1;
                                     freeTable(&tables[i]);
 
@@ -6114,22 +6123,27 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "1. IMPORT table from file"
                         char tableName[MAX_LEN];
                         char filename[MAX_LEN];
+                        do {
+                            printf("Please input the name of the table you would like to import ('\\x' = cancel): ");
+                            fgetsUntil(tableName, MAX_LEN);
+                            if(strcmp(tableName, "\\x") == 0)
+                                break;
 
-                        //Perhaps change this to a numbered menu of all tables found in given file?
-                        printf("Please input the name of the table you would like to import: ");
-                        fgetsUntil(tableName, MAX_LEN);
+                            printf("Please input the name of the file you want to import the table '%s' from.\n(can be of any extension, including .db and .sql)\n('\\b' = back, '\\x' = cancel): ", tableName);
+                            fgetsUntil(filename, MAX_LEN);
+                        } while(strcmp(filename, "\\b") == 0);
 
-                        printf("Please input the name of the file you want to import the table '%s' from.\n(can be of any extension, including .db and .sql): ", tableName);
-                        fgetsUntil(filename, MAX_LEN);
+                        if(strcmp(filename, "\\x") == 0)
+                            break;
 
                         if(!fopen(filename, "r")) {
                             do {
-                                printf("File with name '%s' not found. Please input an existing file's name, or type 'cancel' if you would like to cancel this save: ", filename);
+                                printf("File with name '%s' not found. Please input an existing file's name, or type '\\x' to cancel.", filename);
                                 fgetsUntil(filename, MAX_LEN);
-                            } while(strcmp(filename, "cancel") != 0 && !fopen(filename, "r"));
+                            } while(strcmp(filename, "\\x") != 0 && !fopen(filename, "r"));
                         }
 
-                        if(strcmp(filename, "cancel") != 0) {
+                        if(strcmp(filename, "\\x") != 0) {
                             printf("YEET\n");
                             Table* importedTable = importTable(tableName, filename);
                             printf("HEHE\n");
@@ -6154,17 +6168,19 @@ Table* userTableOperator(int numTables, Table* tables) {
                     case 2: {
                         // "2. IMPORT database from file"
                         char filename[MAX_LEN];
-                        printf("Please input the name of the file you want to import the database from.\n(can be of any extension, including .db and .sql): ");
+                        printf("Please input the name of the file you want to import the database from.\n(can be of any extension, including .db and .sql)\n('\\x' = cancel): ");
                         fgetsUntil(filename, MAX_LEN);
+                        if(strcmp(filename, "\\x") == 0)
+                            break;
 
                         if(!fopen(filename, "r")) {
                             do {
-                                printf("File with name '%s' not found. Please input an existing file's name, or type 'cancel' if you would like to cancel this save: ", filename);
+                                printf("File with name '%s' not found. Please input an existing file's name, or type '\\x' to cancel: ", filename);
                                 fgetsUntil(filename, MAX_LEN);
-                            } while(strcmp(filename, "cancel") != 0 && !fopen(filename, "r"));
+                            } while(strcmp(filename, "\\x") != 0 && !fopen(filename, "r"));
                         }
 
-                        if(strcmp(filename, "cancel") != 0) {
+                        if(strcmp(filename, "\\x") != 0) {
                             printf("Are you sure you want to overwrite the current database? (yes/no): ");
 
                             if(isYes(yesnoInput())) {
@@ -6223,30 +6239,34 @@ Table* userTableOperator(int numTables, Table* tables) {
                             saveChoice = 1;
                             trunc = 0;
 
-                            printf("Please input the name of the file you want to save '%s' to.\n(can be of any extension, including .db and .sql): ", currentTable->name);
+                            printf("Please input the name of the file you want to save '%s' to.\n(can be of any extension, including .db and .sql)\n('\\x' = cancel): ", currentTable->name);
                             fgetsUntil(filename, MAX_LEN);
+                            if(strcmp(filename, "\\x") == 0) {
+                                saveChoice = 0;
+                                break;
+                            }
 
                             if(fopen(filename, "r")) {
 
                                 printf("\nHow would you like to save your data?\n");
-                                printf("1. Save current table along with the other contents of the given file.\n"
-                                    "2. Delete all records in the given file and save your current table afterwards.\n"
-                                    "3. Give a new file name.\n"
-                                    "4. Cancel the save.\n"
+                                printf("1. Save current table along with the other contents of the given file\n"
+                                    "2. Delete all records in the given file and save your current table afterwards\n"
+                                    "3. Give a new file name\n"
+                                    "0. Cancel\n"
                                     "Choice: ");
 
                                 do {
                                     scanfWell("%d", &saveChoice);
-                                    if(saveChoice < 1 || saveChoice > 4)
-                                        printf("Please input a number between 1 & 4: ");
-                                } while(saveChoice < 1 || saveChoice > 4);
+                                    if(saveChoice < 0 || saveChoice > 3)
+                                        printf("Please input a number between 0 & 3: ");
+                                } while(saveChoice < 0 || saveChoice > 3);
 
                                 if(saveChoice == 2)
                                     trunc = 1;
                             }
                         } while(saveChoice == 3);
 
-                        if(saveChoice != 4) {
+                        if(saveChoice != 0) {
                             exportTable(*currentTable, filename, trunc);
                             printf("\n'%s' saved successfully to %s.\n", currentTable->name, filename);
                         }
@@ -6259,8 +6279,12 @@ Table* userTableOperator(int numTables, Table* tables) {
                         do {
                             saveChoice = 1;
 
-                            printf("Please input the name of the file you want to save the database to.\n(can be of any extension, including .db and .sql): ");
+                            printf("Please input the name of the file you want to save the database to.\n(can be of any extension, including .db and .sql)\n('\\x' = cancel): ");
                             fgetsUntil(filename, MAX_LEN);
+                            if(strcmp(filename, "\\x") == 0) {
+                                saveChoice = 0;
+                                break;
+                            }
 
                             if(fopen(filename, "r")) {
 
@@ -6268,14 +6292,14 @@ Table* userTableOperator(int numTables, Table* tables) {
                                 printf("1. Save database along with the other contents of the given file.\n"
                                     "2. Delete all records in the given file and save your database afterwards.\n"
                                     "3. Give a new file name.\n"
-                                    "4. Cancel the save.\n"
+                                    "0. Cancel.\n"
                                     "Choice: ");
 
                                 do {
                                     scanfWell("%d", &saveChoice);
-                                    if(saveChoice < 1 || saveChoice > 4)
-                                        printf("Please input a number between 1 & 4: ");
-                                } while(saveChoice < 1 || saveChoice > 4);
+                                    if(saveChoice < 0 || saveChoice > 3)
+                                        printf("Please input a number between 0 & 3: ");
+                                } while(saveChoice < 0 || saveChoice > 3);
 
                                 if(saveChoice == 2)
                                     truncate(filename, 0);
@@ -6284,15 +6308,14 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         } while(saveChoice == 3);
 
-
-                        for(int i = 0; i < numTables; i++)
-                            exportTable(tables[i], filename, 0);
+                        if(saveChoice != 0)
+                            for(int i = 0; i < numTables; i++)
+                                exportTable(tables[i], filename, 0);
 
                         printf("\nDatabase saved successfully to %s.\n", filename);
                         break;
                     }
                 }
-
                 break;
 
                 /*
@@ -6304,8 +6327,46 @@ Table* userTableOperator(int numTables, Table* tables) {
             case 0:
                 //"0. EXIT"
                 switch(menuChoices[1]) {
-                    case 1:
+                    case 1: {
                         // "1. SAVE & EXIT"
+                        char filename[MAX_LEN];
+                        int saveChoice;
+                        do {
+                            saveChoice = 1;
+
+                            printf("Please input the name of the file you want to save the database to.\n(can be of any extension, including .db and .sql)\n('\\x' = cancel): ");
+                            fgetsUntil(filename, MAX_LEN);
+                            if(strcmp(filename, "\\x") == 0) {
+                                saveChoice = 0;
+                                break;
+                            }
+
+                            if(fopen(filename, "r")) {
+
+                                printf("\nHow would you like to save your data?\n");
+                                printf("1. Save database along with the other contents of the given file.\n"
+                                    "2. Delete all records in the given file and save your database afterwards.\n"
+                                    "3. Give a new file name.\n"
+                                    "0. Cancel.\n"
+                                    "Choice: ");
+
+                                do {
+                                    scanfWell("%d", &saveChoice);
+                                    if(saveChoice < 0 || saveChoice > 3)
+                                        printf("Please input a number between 0 & 3: ");
+                                } while(saveChoice < 0 || saveChoice > 3);
+
+                                if(saveChoice == 2)
+                                    truncate(filename, 0);
+
+                            }
+
+                        } while(saveChoice == 3);
+
+                        if(saveChoice != 0)
+                            for(int i = 0; i < numTables; i++)
+                                exportTable(tables[i], filename, 0);
+
                         printf("Saving");
                         for(int i = 0; i < 3; i++) {
                             cql_sleep(750);
@@ -6313,8 +6374,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                             fflush(stdout);
                         }
                         cql_sleep(750);
-                        printf("\nDatabase Saved.\n");
+                        printf("\nDatabase saved successfully to %s.\n", filename);
                         cql_sleep(250);
+                    }
                     case 2:
                         // "2. EXIT WITHOUT SAVING"
                         printf("Exiting Program.\n");

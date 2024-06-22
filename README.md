@@ -14,12 +14,8 @@ Execute the program with ./cql
 ## Visuals
 
 ## Roadmap
-- Add 'back' or 'cancel' option to nearly every stage of user input.
-    - (Have done up to and including case 12)
-- Make SAVE & QUIT actually work.
-
 - Valgrind and fix all leaks.
-- Learn how to throw errors instead of just printing errors.
+- Add error return numbers to all functions.
 - Add full library documentation.
 
 If I feel like it:
@@ -42,6 +38,7 @@ If I feel like it:
 - Foreign Key functionality.
 - Undo feature.
 - Extra CHAR comparisons (Contains, starts with, ends with).
+- Saving and loading select and where statements for quick repeated usage.
 
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.
