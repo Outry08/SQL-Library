@@ -69,8 +69,6 @@ int main(int argc, char const* argv[]) {
 
     Select select1 = newSelect(2, nameList(2, "Decimal Col", "Char Col"), 0);
 
-    printf("%d\n", tables[0].cols[0].defaultValue.isNULL);
-
     tables[1] = cql_select(tables[0], select1, 2, whereList(2, where5, where3), connectiveList(1, '|'));
 
     Select select2 = newSelect(1, nameList(1, "Char Col"), 0);
@@ -84,6 +82,8 @@ int main(int argc, char const* argv[]) {
 
     userTableOperator(2, tables);
 
+    freeDatabase(tables, 2);
+
     return 0;
 }
 
@@ -91,7 +91,7 @@ int main(int argc, char const* argv[]) {
  * SQL Origin:
  *  CREATE tableName (col1Name col1Type, col2Name col2Type, ...)
 */
-Table create(char* tableName, int numCols, char** colNames, int* colTypes, char** colAttrs, void** defaultValues, char** foreignKeyNames) {
+Table create(char* tableName, int numCols, char colNames[numCols][MAX_LEN], int* colTypes, char** colAttrs, void** defaultValues, char** foreignKeyNames) {
 
     Table table;
 
@@ -99,6 +99,7 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
         printf("INVALID TABLE NAME\n");
         return table;
     }
+    printf("%s\n", *colNames);
 
     table.name = strdup(tableName);
     table.numCols = numCols;
@@ -137,7 +138,7 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
  *   INTO tableName(col1Name, col2Name, ...)
  *   VALUES (val1, val2, ...)
 */
-void insertRow(Table* table, int numValues, char** colNames, void** values) {
+void insertRow(Table* table, int numValues, char colNames[numValues][MAX_LEN], void** values) {
 
     if(numValues > table->numCols) {
         printf("Error: To many arguments provided. Insertion failed.\n");
@@ -346,7 +347,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
     // printf("DIGGITY DONE\n");
 }
 
-void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum) {
+void insertIntoRow(Table* table, int numValues, char colNames[numValues][MAX_LEN], void** values, int rowNum) {
 
     rowNum--;
 
@@ -997,7 +998,7 @@ int deleteInvalidFKeyVals(Column* col) {
  *   SET colName = newValue
  *   WHERE tableName.whereColName =, >, <, >=, <=, != whereValue
 */
-void update(Table* table, int numUpdCols, char** colNames, void** newValues, int numWheres, Where* wheres, char* conns) {
+void update(Table* table, int numUpdCols, char colNames[numUpdCols][MAX_LEN], void** newValues, int numWheres, Where* wheres, char* conns) {
 
     Column currCol;
     int* prevGoodJs;
@@ -1200,6 +1201,13 @@ void freeTable(Table* table) {
     free(table->name);
 }
 
+void freeDatabase(Table* tables, int numTables) {
+    for(int i = 0; i < numTables; i++)
+        freeTable(&tables[i]);
+
+    free(tables);
+}
+
 void deleteColumn(Table* table, char* colName) {
     int colIndex;
 
@@ -1262,9 +1270,7 @@ void deleteRow(Table* table, int rowNum) {
 
 Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* conns) {
 
-    // printf("CREATEY CREATEY %d\n", table.cols[0].defaultValue.isNULL);
     Table tableCopy = copyTable(table);
-    // printf("DONE COPYING\n");
 
     free(tableCopy.name);
     tableCopy.name = strdup(table.name);
@@ -1272,21 +1278,8 @@ Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* co
     if(numWheres > 0)
         delete(&tableCopy, numWheres, notWheres(numWheres, wheres), notConnectives(numWheres - 1, conns));
 
-
-
     Table selectedTable;
 
-    // if(sel.numCols == table.numCols) {
-    //     for(int i = 0; i < sel.numCols; i++)
-    //         if(sel.colNames[i] != NULL)
-    //             free(sel.colNames[i]);
-
-    //     sel.numCols = tableCopy.numCols;
-
-    //     for(int i = 0; i < tableCopy.numCols; i++) {
-    //         sel.colNames[i] = strdup(tableCopy.cols[i].name);
-    //     }
-    // }
     selectedTable = selCreate(tableCopy, sel.numCols, sel.colNames);
 
     if(sel.distinct)
@@ -1315,13 +1308,10 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
 
     int allAggs = 1;
 
-    // char* newName;
-
     int extraOffset = 0;
 
     for(int i = 0; i < numCols; i++) {
         if(!isAggregate(colNames[i])) {
-            // printf("TIME TO COPY\n");
             if(strcmp(colNames[i], "*") == 0) {
                 newTable.numCols += baseTable.numCols - 1;
                 newTable.cols = realloc(newTable.cols, sizeof(Column) * newTable.numCols);
@@ -1332,7 +1322,6 @@ Table selCreate(Table baseTable, int numCols, char** colNames) {
             }
             else
                 newTable.cols[i + extraOffset] = copyColumn(nameToCol(&baseTable, colNames[i], NULL));
-            // printf("DONE COPYING\n");
             allAggs = 0;
         }
         else {
@@ -2326,29 +2315,37 @@ Where newWhere(char* searchColName, char* comparison, void* searchValue) {
 
     return newWhere;
 }
-Select newSelect(int numCols, char** colNames, int distinct) {
+Select newSelect(int numCols, char colNames[numCols][MAX_LEN], int distinct) {
     Select select;
 
     if(numCols < 0)
         select.numCols = 0;
     else
         select.numCols = numCols;
-    select.colNames = colNames;
+
+    select.colNames = malloc(sizeof(char*) * numCols);
+    for(int i = 0; i < numCols; i++)
+        select.colNames[i] = strdup(colNames[i]);
     select.distinct = distinct;
 
     return select;
 }
 char** nameList(int numNames, ...) {
-    va_list ap;
-    char** nameList = malloc(sizeof(char*) * numNames);
-    va_start(ap, numNames);
+    if(numNames <= 100) {
+        va_list ap;
+        va_start(ap, numNames);
 
-    for(int i = 0; i < numNames; i++)
-        nameList[i] = strdup(va_arg(ap, char*));
+        static char nameList[MAX_LEN][MAX_LEN];
 
-    va_end(ap);
+        for(int i = 0; i < numNames; i++)
+            strcpy(nameList[i], va_arg(ap, char*));
 
-    return nameList;
+        va_end(ap);
+
+        return nameList;
+    }
+    else
+        return NULL;
 }
 void** valueList(int numValues, int* types, ...) {
 
@@ -4692,9 +4689,9 @@ Table* userTableOperator(int numTables, Table* tables) {
                             }
 
                             for(int i = 0; i < numUpdCols; i++) {
-                                if(nameList[i])
+                                if(nameList && nameList[i])
                                     free(nameList[i]);
-                                if(valueList[i])
+                                if(valueList && valueList[i])
                                     free(valueList[i]);
                             }
                             if(nameList)
@@ -6363,23 +6360,30 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         } while(saveChoice == 3);
 
-                        if(saveChoice != 0)
+                        if(saveChoice != 0) {
                             for(int i = 0; i < numTables; i++)
                                 exportTable(tables[i], filename, 0);
 
-                        printf("Saving");
-                        for(int i = 0; i < 3; i++) {
+                            printf("Saving");
+                            for(int i = 0; i < 3; i++) {
+                                cql_sleep(750);
+                                printf(".");
+                                fflush(stdout);
+                            }
                             cql_sleep(750);
-                            printf(".");
-                            fflush(stdout);
+                            printf("\nDatabase saved successfully to %s.\n", filename);
+                            cql_sleep(250);
                         }
-                        cql_sleep(750);
-                        printf("\nDatabase saved successfully to %s.\n", filename);
-                        cql_sleep(250);
+                        else
+                            menuChoices[0] = 1;
+                        break;
                     }
                     case 2:
                         // "2. EXIT WITHOUT SAVING"
                         printf("Exiting Program.\n");
+                        printf("Are you sure you want to exit and lose your changes? (yes/no): ");
+                        if(isNo(yesnoInput()))
+                            menuChoices[0] = 1;
                         break;
                 }
                 break;
@@ -6387,6 +6391,31 @@ Table* userTableOperator(int numTables, Table* tables) {
         }
 
     } while(menuChoices[0] > 0);
+
+    if(menuChoices)
+        free(menuChoices);
+
+
+    // char** nameList = NULL;
+    // int* typeList = NULL;
+    // void** valueList = NULL;
+    // char** attrList = NULL;
+    // void** defaultValList = NULL;
+    // char** foreignKeyList = NULL;
+
+    // Where* whereList = NULL;
+    // int numWheres = 0;
+    // char* connectiveList = NULL;
+    // int* numList;
+
+    // Select sel;
+
+    // void* valCopy = NULL;
+    // int valCopyType = -1;
+    // LoneValue* rowCopy = NULL;
+    // int rowCopyLength;
+    // colCopy.name = NULL;
+
 
     return tables;
 
@@ -7636,6 +7665,8 @@ void checkDupColumnNames(Table table, char* nameToCheck, int newNameIndex) {
 
 int checkInvalidName(char* name) {
 
+    printf("YEET, %s\n", name);
+
     int numBadStrings = 8;
 
     char** invalidStrings = malloc(sizeof(char*) * numBadStrings);
@@ -7648,10 +7679,14 @@ int checkInvalidName(char* name) {
     invalidStrings[6] = "*";
     invalidStrings[7] = ".";
 
-    for(int i = 0; i < numBadStrings; i++)
-        if(containsIgnoreCase(name, invalidStrings[i]))
+    for(int i = 0; i < numBadStrings; i++) {
+        if(containsIgnoreCase(name, invalidStrings[i])) {
+            free(invalidStrings);
             return 0;
+        }
+    }
 
+    free(invalidStrings);
     return 1;
 }
 
@@ -7766,6 +7801,3 @@ void cql_sleep(int milliseconds) {
 
     nanosleep(&ts, &ts);
 }
-
-// remember SQLITE3 terminal command can also read .sql files.
-// sqlite3_exec(sqlite3_open(demo.sql), "CREATE TABLE Mario", NULL, NULL, "Error: SQL Execution Failed");

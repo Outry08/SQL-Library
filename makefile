@@ -8,3 +8,5 @@ cql : sqllib.c sqllib.h
 
 clean:
 	- rm *.o cql
+
+## leaks --atExit -- ./cql 

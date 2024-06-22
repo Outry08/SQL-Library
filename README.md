@@ -15,6 +15,7 @@ Execute the program with ./cql
 
 ## Roadmap
 - Valgrind and fix all leaks.
+    - Change everything to do with the list creator functions from *s to []s
 - Add error return numbers to all functions.
 - Add full library documentation.
 

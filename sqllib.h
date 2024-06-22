@@ -93,22 +93,22 @@ typedef struct {
 **/
 //Primary Keys, Foreign Keys, NOT NULL, and AUTOINCREMENT are something yet to be added.
 //Primary keys use hashtables in SQL, so could do that here too.
-Table create(char* tableName, int numCols, char** colNames, int* colTypes, char** colAttrs, void** defaultValues, char** foreignKeyNames); //Implemented
+Table create(char* tableName, int numCols, char colNames[numCols][MAX_LEN], int* colTypes, char** colAttrs, void** defaultValues, char** foreignKeyNames); //Implemented
 
 Table cql_select(Table table, Select select, int numWheres, Where* wheres, char* conns); //Implemented
 Table selCreate(Table baseTable, int numCols, char** colNames); //Implemented
 Table joinSelect(Table* tables, int numTables, Select select, int numWheres, Where* wheres, char* conns);
 
-void insertRow(Table* table, int numValues, char** colNames, void** values); //Implemented
+void insertRow(Table* table, int numValues, char colNames[numValues][MAX_LEN], void** values); //Implemented
 
-void update(Table* table, int numUpdCols, char** colNames, void** newValues, int numWheres, Where* wheres, char* conns); //Implemented
+void update(Table* table, int numUpdCols, char colNames[numUpdCols][MAX_LEN], void** newValues, int numWheres, Where* wheres, char* conns); //Implemented
 void delete(Table* table, int numWheres, Where* wheres, char* conns); //Implemented
 
 /**
  * More C-Like Functions for Table Operations
 **/
 void chackDupNames(Table* tableList);
-void insertIntoRow(Table* table, int numValues, char** colNames, void** values, int rowNum); //Implemented
+void insertIntoRow(Table* table, int numValues, char colNames[numValues][MAX_LEN], void** values, int rowNum); //Implemented
 void insertCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName); //Implemented
 void insertIntoCol(Table* table, char* colName, int colType, int numValues, int* rowNums, void** values, char* colAttrs, void* defaultValue, char* foreignKeyName, char* colPos); //Implemented
 void deleteColumn(Table* table, char* colName); //Implemented
@@ -138,6 +138,7 @@ int containsCol(Table table, char* colName); //Implemented
 int compare(Column column, int valIndex, char* comparison, void* value); //Implemented
 char* oppComp(char* comparison); //Implemented
 void freeTable(Table* table); //Implemented
+void freeDatabase(Table* tables, int numTables); //Implemented
 
 Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented
@@ -216,7 +217,7 @@ Table* userTableOperator(int numTables, Table* tables);
  * Struct and List Constructors
 **/
 Where newWhere(char* searchColName, char* comparison, void* searchValue); //Implemented
-Select newSelect(int numCols, char** colNames, int distinct); //Implemented
+Select newSelect(int numCols, char colNames[numCols][MAX_LEN], int distinct); //Implemented
 char** nameList(int numNames, ...); //Implemented
 int* typeList(int numTypes, ...); //Implemented
 void** valueList(int numValues, int* types, ...); //Implemented
