@@ -223,7 +223,7 @@ int callbackCreateTable(void* value, int numCols, char** values, char** colNames
 int callbackInsertData(void* value, int numCols, char** values, char** colNames); //Implemented
 int callbackGetTableNames(void* value, int numCols, char** values, char** colNames); //Implemented
 int callbackGetAttributes(void* value, int numCols, char** values, char** colNames); //Implemented
-Table* userTableOperator(int numTables, Table* tables);
+int userTableOperator(int numTables, Table** tables);
 
 /**
  * Struct and List Constructors

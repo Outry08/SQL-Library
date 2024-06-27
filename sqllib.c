@@ -54,13 +54,11 @@ int main(int argc, char const* argv[]) {
     types = typeList(1, DECIMAL);
     values = valueList(1, types, 9999.999);
     Where* wheres = whereList(1, where1);
-    char* conns = connectiveList(0);
-    update(&tables[0], 1, names, values, 1, wheres, conns);
+    update(&tables[0], 1, names, values, 1, wheres, NULL);
     freeList(names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
-    free(conns);
     printTable(tables[0]);
 
     newNum = 0;
@@ -72,7 +70,7 @@ int main(int argc, char const* argv[]) {
     types = typeList(2, INTEGER, DECIMAL);
     values = valueList(2, types, 1738, 22.5);
     wheres = whereList(2, where1, where2);
-    conns = connectiveList(1, '|');
+    char* conns = connectiveList(1, '|');
     update(&tables[0], 2, names, values, 2, wheres, conns);
     freeList(names, 2);
     free(types);
@@ -87,13 +85,11 @@ int main(int argc, char const* argv[]) {
     types = typeList(1, CHAR);
     values = valueList(1, types, "WAAAAARIOOOOOOO");
     wheres = whereList(1, where3);
-    conns = connectiveList(0);
-    update(&tables[0], 1, names, values, 1, wheres, conns);
+    update(&tables[0], 1, names, values, 1, wheres, NULL);
     freeList(names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
-    free(conns);
     printTable(tables[0]);
 
     names = nameList(1, "Decimal Col");
@@ -140,14 +136,12 @@ int main(int argc, char const* argv[]) {
     types = typeList(1, CHAR);
     values = valueList(1, types, "Princess Peach");
     wheres = whereList(1, where3);
-    conns = connectiveList(0);
 
-    update(&tables[0], 1, names, values, 1, wheres, conns);
+    update(&tables[0], 1, names, values, 1, wheres, NULL);
     freeList(names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
-    free(conns);
 
     printTable(tables[0]);
 
@@ -215,9 +209,9 @@ int main(int argc, char const* argv[]) {
     free(types);
     freeList(values, 4);
 
-    userTableOperator(2, tables);
+    int numTables = userTableOperator(2, &tables);
 
-    freeDatabase(tables, 2);
+    freeDatabase(tables, numTables);
 
     return 0;
 }
@@ -876,6 +870,10 @@ void insertIntoCol(Table* table, char* colName, int colType, int numValues, int*
 
 }
 
+/**
+ * Initializes attributes of a column to their base values. This is an important function to call to ensure your column works correctly.
+ * @param col - The column whose attributes are getting initialized.
+**/
 void initColAttrs(Column* col) {
     col->notNull = 0;
     col->defaultValue.isNULL = 1;
@@ -885,32 +883,33 @@ void initColAttrs(Column* col) {
     col->autoIncrement = 0;
 }
 
+/**
+ * Takes a string of letters representing attributes to assign to a column, and ensures the column adheres to these attributes up to this point. String example: "APF" = AutoIncrement, Primary Key, Foreign Key
+ * @param col - The column having the attributes assigned to it.
+ * @param attrs - The attribute string.
+ * @param defaultVal - A default value to take the place of NULL for the column. (Optional)
+ * @param foreignKeyName - The name of the foreign key column this column will refer to if F is in the attrs string. Of the format 'TableName.ColumnName'. (Only needed if F is in the attr string)
+**/
 void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKeyName) {
 
-    printf("I'm HERE!\n");
-
     if(attrs != NULL) {
+        //Default Value
         if(defaultVal != NULL) {
             col->defaultValue.isNULL = 0;
-            if(col->type == INTEGER) {
+            if(col->type == INTEGER)
                 col->defaultValue.val.INTEGER = *((int*)defaultVal);
-            }
-            else if(col->type == DECIMAL) {
+            else if(col->type == DECIMAL)
                 col->defaultValue.val.DECIMAL = *((double*)defaultVal);
-            }
-            else if(col->type == CHAR) {
+            else if(col->type == CHAR)
                 col->defaultValue.val.CHAR = strdup((char*)defaultVal);
-            }
-            else if(col->type == BOOL) {
+            else if(col->type == BOOL)
                 col->defaultValue.val.BOOL = *((int*)defaultVal);
-            }
-            else if(col->type == DATE) {
+            else if(col->type == DATE)
                 printf("DATE datatype yet to be implemented.\n");
-            }
         }
+        //Not Null
         if(strchr(attrs, 'N')) {
             col->notNull = 1;
-            printf("NULLY NULLY\n");
             if(!defaultVal && col->defaultValue.isNULL) {
                 col->defaultValue.isNULL = 0;
                 if(col->type == INTEGER)
@@ -943,24 +942,23 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                 }
             }
         }
+        //Primary Key
         if(strchr(attrs, 'P')) {
             col->isPrimaryKey = 1;
-            if(col->numRows > 0) {
+            if(col->numRows > 0)
                 deleteDuplicateValues(col);
-            }
         }
+        //Foreign Key
         if(strchr(attrs, 'F') && foreignKeyName) {
-            printf("%s : %s\n\n", col->name, foreignKeyName);
             col->hasForeignKey = 1;
             if(foreignKeyName)
                 col->fKeyName = strdup(foreignKeyName);
             else
                 col->fKeyName = NULL;
         }
+        //Auto Increment
         if(strchr(attrs, 'A')) {
             if(col->type == INTEGER || col->type == DECIMAL || col->type == CHAR) {
-
-                printf("It is time.\n");
 
                 col->autoIncrement = 1;
                 col->defaultValue.isNULL = 0;
@@ -985,8 +983,6 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                         col->defaultValue.val.DECIMAL = maxVal + 0.1;
                     }
                     else if(col->type == CHAR) {
-
-                        // printf("CHARiszard\n");
 
                         int maxVal = letterToInt("A") - 1;
 
@@ -1030,6 +1026,13 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
     }
 }
 
+/**
+ * Required to set a new foreign key pointer, as when the attribute is first assigned, the other table was not accessible.
+ * @param col - The column that needs its foreign key pointer set.
+ * @param numTables - The number of tables in the array of tables that is the next parameter.
+ * @param tables - The array of tables, containing within it the table that the column's foreign key will point to.
+ * @return - Success or failure of setting the pointer. 1 = success, 0 = failure.
+**/
 int setForeignKeyPointer(Column* col, int numTables, Table* tables) {
     if(!col || !tables)
         return 0;
@@ -1045,6 +1048,7 @@ int setForeignKeyPointer(Column* col, int numTables, Table* tables) {
 
     Table* foreignTable = NULL;
 
+    //Finding the matching table
     for(int i = 0; i < numTables; i++) {
         if(strcmp(tableName, tables[i].name) == 0) {
             foreignTable = &tables[i];
@@ -1058,6 +1062,7 @@ int setForeignKeyPointer(Column* col, int numTables, Table* tables) {
     col->fKeyPointer = NULL;
     col->fKeyIndex = -1;
 
+    //Finding the matching column
     for(int i = 0; i < foreignTable->numCols; i++) {
         if(strcmp(colName, foreignTable->cols[i].name) == 0 && foreignTable->cols[i].isPrimaryKey && col->type == foreignTable->cols[i].type) {
             col->fKeyPointer = &foreignTable->cols;
@@ -1069,17 +1074,22 @@ int setForeignKeyPointer(Column* col, int numTables, Table* tables) {
     if(col->fKeyPointer == NULL)
         return 0;
 
+    //Ensuring adherance to this new foreign key relationship
     deleteInvalidFKeyVals(col);
 
     return 1;
-
 }
 
+/**
+ * Looks into the given column and deletes any rows that violates its foreign key relationship. A violation occurs when the column contains values that the column it is referencing does not.
+ * @param col - The column being evaluated.
+ * @return - Success or failure of the validation of foreign key rules. Failure means there is some discrepancy with the foreign key name, pointer, or index.
+**/
 int deleteInvalidFKeyVals(Column* col) {
 
+    //Error checks
     if(!col->hasForeignKey || col->fKeyIndex < 0 || col->fKeyName == NULL || strchr(col->fKeyName, '.') == NULL || col->fKeyPointer == NULL)
         return 0;
-
     if(!(*col->fKeyPointer)[col->fKeyIndex].isPrimaryKey || col->type != (*col->fKeyPointer)[col->fKeyIndex].type) {
         col->hasForeignKey = 0;
         col->fKeyIndex = -1;
@@ -1091,6 +1101,7 @@ int deleteInvalidFKeyVals(Column* col) {
         return 0;
     }
 
+    //Looping through and comparing the values of the given column with its foreign key to find any mismatches
     if(col->type == CHAR) {
         for(int i = 0; i < col->numRows; i++) {
             int valid = 0;
@@ -1154,20 +1165,22 @@ int deleteInvalidFKeyVals(Column* col) {
                 col->values[i].isNULL = 1;
         }
     }
-    else if(col->type == DATE) {
+    else if(col->type == DATE)
         printf("DATE datatype yet to be implemented.\n");
-    }
 
     return 1;
-
 }
 
 /**
- * SQL Origin:
- *  UPDATE tableName
- *   SET colName = newValue
- *   WHERE tableName.whereColName =, >, <, >=, <=, != whereValue
-*/
+ * Takes a table and WHERE statement(s) to update existing values in the table with the provided new value(s).
+ * @param table - The table that is being updated.
+ * @param numUpdCols - The number of cols that are going to have their values updated.
+ * @param colNames - The array of names of columns that will have their values updated.
+ * @param newValues - The array of values that will replace the values that satisfy the where conditions. Each value aligns with the colNames array.
+ * @param numWheres - The number of WHERE statements provided to this update.
+ * @param wheres - The array of where statements.
+ * @param conns - The array of logical connectives that string the WHERE statements together. (Can consist of '~', '&', and '|'). Only required if there is more than one WHERE statement. Ensure your connective array begins with '~'. If not your WHERE statements may not be connected how you like.
+**/
 void update(Table* table, int numUpdCols, char** colNames, void** newValues, int numWheres, Where* wheres, char* conns) {
 
     Column currCol;
@@ -1175,9 +1188,19 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
     int numPrevGoodJs;
     int toUpdate[table->numRows];
 
+    if(conns == NULL)
+        conns = "~";
+    else if(conns[0] != '~') {
+        conns = realloc(conns, sizeof(char) * MAX_LEN);
+        for(int i = strlen(conns); i > 0; i++)
+            conns[i + 1] = conns[i];
+        conns[0] = '~';
+    }
+
     for(int i = 0; i < table->numRows; i++)
         toUpdate[i] = 1;
 
+    //Looping through AND/OR logic for the number of WHERE statements
     for(int i = 0; i < numWheres; i++) {
         prevGoodJs = malloc(sizeof(int));
         numPrevGoodJs = 0;
@@ -1208,6 +1231,7 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
             }
 
         }
+        //Each set of WHERE statements are broken up by ORs. Once an OR shows up, the values that have met the first OR condition are updated.
         if((i == numWheres - 1 || conns[i + 1] == '|' || conns[i + 1] == 'o' || conns[i + 1] == 'O') && (numPrevGoodJs > 0 && numPrevGoodJs <= table->numRows)) {
 
             for(int l = 0; l < numPrevGoodJs; l++) {
@@ -1217,8 +1241,10 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
                         if(!currCol.notNull && !currCol.autoIncrement)
                             currCol.values[prevGoodJs[l]].isNULL = 1;
                         else {
-                            currCol.values[prevGoodJs[l]].isNULL = 0;
+
                             if(currCol.type == CHAR) {
+                                if(!currCol.values[prevGoodJs[l]].isNULL && currCol.values[prevGoodJs[l]].val.CHAR)
+                                    free(currCol.values[prevGoodJs[l]].val.CHAR);
                                 currCol.values[prevGoodJs[l]].val.CHAR = strdup(currCol.defaultValue.val.CHAR);
                                 if(currCol.autoIncrement)
                                     currCol.defaultValue.val.CHAR = intToLetter(letterToInt(currCol.defaultValue.val.CHAR) + 1);
@@ -1237,9 +1263,13 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
                                 currCol.values[prevGoodJs[l]].val.BOOL = currCol.defaultValue.val.BOOL;
                             else if(currCol.type == DATE)
                                 printf("DATE datatype functionality coming soon.\n");
+                            currCol.values[prevGoodJs[l]].isNULL = 0;
                         }
                     }
                     else if(currCol.type == CHAR) {
+
+                        if(!currCol.values[prevGoodJs[l]].isNULL && currCol.values[prevGoodJs[l]].val.CHAR)
+                            free(currCol.values[prevGoodJs[l]].val.CHAR);
                         currCol.values[prevGoodJs[l]].isNULL = 0;
                         currCol.values[prevGoodJs[l]].val.CHAR = strdup((char*)newValues[k]);
                     }
@@ -1264,6 +1294,7 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
         free(prevGoodJs);
     }
 
+    //Ensuring adherance to the column's attributes after an update
     for(int i = 0; i < table->numCols; i++) {
         if(table->cols[i].isPrimaryKey)
             deleteDuplicateValues(&table->cols[i]);
@@ -1274,19 +1305,30 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
 }
 
 /**
- * SQL Origin:
- *  DELETE
- *   FROM tableName
- *   WHERE tableName.whereColName =, >, <, >=, <=, != whereValue
-*/
+ * Takes a table and WHERE statement(s) to delete rows in the table that meet the WHERE statement conditions.
+ * @param table - The table that is having rows deleted.
+ * @param numWheres - The number of WHERE statements provided to this deletion.
+ * @param wheres - The array of where statements.
+ * @param conns - The array of logical connectives that string the WHERE statements together. (Can consist of '~', '&', and '|'). Only required if there is more than one WHERE statement. Ensure your connective array begins with '~'. If not your WHERE statements may not be connected how you like.
+**/
 void delete(Table* table, int numWheres, Where* wheres, char* conns) {
     int* prevGoodJs;
     int numPrevGoodJs;
-
     int toDelete[table->numRows];
+
+    if(conns == NULL)
+        conns = "~";
+    else if(conns[0] != '~') {
+        conns = realloc(conns, sizeof(char) * MAX_LEN);
+        for(int i = strlen(conns); i > 0; i++)
+            conns[i + 1] = conns[i];
+        conns[0] = '~';
+    }
+
     for(int i = 0; i < table->numRows; i++)
         toDelete[i] = 1;
 
+    //Looping through AND/OR logic for the number of WHERE statements
     for(int i = 0; i < numWheres; i++) {
         prevGoodJs = malloc(sizeof(int));
         numPrevGoodJs = 0;
@@ -1328,8 +1370,11 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
                                 table->cols[l].values[m].val.INTEGER = table->cols[l].values[m + 1].val.INTEGER;
                             else if(table->cols[l].type == DECIMAL)
                                 table->cols[l].values[m].val.DECIMAL = table->cols[l].values[m + 1].val.DECIMAL;
-                            else if(table->cols[l].type == CHAR)
+                            else if(table->cols[l].type == CHAR) {
+                                if(table->cols[l].values[m].val.CHAR)
+                                    free(table->cols[l].values[m].val.CHAR);
                                 table->cols[l].values[m].val.CHAR = strdup(table->cols[l].values[m + 1].val.CHAR);
+                            }
                             else if(table->cols[l].type == BOOL)
                                 table->cols[l].values[m].val.BOOL = table->cols[l].values[m + 1].val.BOOL;
                             else if(table->cols[l].type == DATE)
@@ -1337,11 +1382,16 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
                         }
                     }
                 }
+
                 table->numRows--;
+                if(table->cols[table->numRows].type == CHAR)
+                    for(int l = 0; l < table->numRows + 1; l++)
+                        if(!table->cols[table->numRows].values[l].isNULL && table->cols[table->numRows].values[l].val.CHAR)
+                            free(table->cols[table->numRows].values[l].val.CHAR);
+
                 for(int l = k + 1; l < numPrevGoodJs; l++)
                     if(prevGoodJs[l] > prevGoodJs[k])
                         prevGoodJs[l]--;
-
 
             }
         }
@@ -1351,26 +1401,45 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
     if(numWheres <= 0)
         table->numRows = 0;
 
-    for(int i = 0; i < table->numCols; i++)
+    for(int i = 0; i < table->numCols; i++) {
+        table->cols[i].values = realloc(table->cols[i].values, sizeof(Value) * table->numRows);
         table->cols[i].numRows = table->numRows;
+    }
 }
 
+/**
+ * A function to free all aspects of a table. This includes its string values, rows, columns, and its name.
+ * @param table - The table to have all its aspects freed.
+**/
 void freeTable(Table* table) {
+    //Freeing string values
     for(int i = 0; i < table->numCols; i++) {
-        if(table->cols[i].type == CHAR)
+        if(table->cols[i].type == CHAR) {
             for(int j = 0; j < table->numRows; j++)
                 if(!table->cols[i].values[j].isNULL && table->cols[i].values[j].val.CHAR != NULL)
                     free(table->cols[i].values[j].val.CHAR);
+            //Freeing string default value
+            if(!table->cols[i].defaultValue.isNULL && table->cols[i].defaultValue.val.CHAR != NULL)
+                free(table->cols[i].defaultValue.val.CHAR);
+        }
+        //Freeing foreign key name
         if(table->cols[i].fKeyName != NULL)
             free(table->cols[i].fKeyName);
+        //Freeing rows
         free(table->cols[i].values);
         free(table->cols[i].name);
     }
 
+    //Freeing columns
     free(table->cols);
     free(table->name);
 }
 
+/**
+ * A function to free a database of tables. Calls freeTable for each table.
+ * @param tables - The array of tables to be freed.
+ * @param numTables - The number of tables in the array.
+ */
 void freeDatabase(Table* tables, int numTables) {
     for(int i = 0; i < numTables; i++)
         freeTable(&tables[i]);
@@ -1378,6 +1447,11 @@ void freeDatabase(Table* tables, int numTables) {
     free(tables);
 }
 
+/**
+ * Deletes a column based on the given column name in the given table.
+ * @param table - The table to have a column deleted from.
+ * @param colName - The name of the column to be deleted.
+**/
 void deleteColumn(Table* table, char* colName) {
     int colIndex;
 
@@ -1388,6 +1462,10 @@ void deleteColumn(Table* table, char* colName) {
             for(int i = 0; i < table->numRows; i++)
                 if(!col.values[i].isNULL)
                     free(col.values[i].val.CHAR);
+        if(!col.defaultValue.isNULL && col.defaultValue.val.CHAR)
+            free(col.defaultValue.val.CHAR);
+        if(col.fKeyName)
+            free(col.fKeyName);
         free(col.values);
         free(col.name);
         table->numCols--;
@@ -1402,6 +1480,11 @@ void deleteColumn(Table* table, char* colName) {
     }
 }
 
+/**
+ * Deletes a row based on the given row number in the given table.
+ * @param table - The table to have a row deleted from.
+ * @param rowNum - The number of the row to be deleted. (0 indexed)
+**/
 void deleteRow(Table* table, int rowNum) {
     if(table->numRows <= 0) {
         printf("There are no rows to delete.\n");
@@ -1416,8 +1499,11 @@ void deleteRow(Table* table, int rowNum) {
                     table->cols[i].values[j].val.INTEGER = table->cols[i].values[j + 1].val.INTEGER;
                 else if(table->cols[i].type == DECIMAL)
                     table->cols[i].values[j].val.DECIMAL = table->cols[i].values[j + 1].val.DECIMAL;
-                else if(table->cols[i].type == CHAR)
+                else if(table->cols[i].type == CHAR) {
+                    if(!table->cols[i].values[j].isNULL && table->cols[i].values[j].val.CHAR)
+                        free(table->cols[i].values[j].val.CHAR);
                     table->cols[i].values[j].val.CHAR = strdup(table->cols[i].values[j + 1].val.CHAR);
+                }
                 else if(table->cols[i].type == BOOL)
                     table->cols[i].values[j].val.BOOL = table->cols[i].values[j + 1].val.BOOL;
                 else if(table->cols[i].type == DATE)
@@ -4003,7 +4089,7 @@ void shrinkSpaces(char** string) {
 
 }
 
-Table* userTableOperator(int numTables, Table* tables) {
+int userTableOperator(int numTables, Table** tables) {
 
     Table* currentTable = NULL;
 
@@ -4059,7 +4145,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                 if(strcmp(tableName, "\\x") == 0)
                     break;
 
-                checkDupTableNames(tables, numTables, tableName, numTables);
+                checkDupTableNames(*tables, numTables, tableName, numTables);
 
                 printf("How many columns would you like to have? (numbers < 0 = cancel): ");
                 scanfWell("%d", &numThings);
@@ -4088,18 +4174,18 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                     numTables++;
                     if(numTables == 1)
-                        tables = malloc(sizeof(Table));
+                        *tables = malloc(sizeof(Table));
                     else
-                        tables = realloc(tables, sizeof(Table) * numTables);
+                        *tables = realloc(*tables, sizeof(Table) * numTables);
 
-                    tables[numTables - 1] = create(tableName, numThings, nameList, typeList, attrList, defaultValList, foreignKeyList);
+                    (*tables)[numTables - 1] = create(tableName, numThings, nameList, typeList, attrList, defaultValList, foreignKeyList);
 
-                    currentTable = &tables[numTables - 1];
+                    currentTable = &(*tables)[numTables - 1];
                     currTableIndex = numTables - 1;
 
                     for(int i = 0; i < currentTable->numCols; i++)
                         if(currentTable->cols[i].hasForeignKey)
-                            setForeignKeyPointer(&currentTable->cols[i], numTables, tables);
+                            setForeignKeyPointer(&currentTable->cols[i], numTables, *tables);
 
                     for(int i = 0; i < numThings; i++) {
                         free(nameList[i]);
@@ -4121,15 +4207,15 @@ Table* userTableOperator(int numTables, Table* tables) {
                     foreignKeyList = NULL;
                 }
                 else {
-                    tables[numTables - 1] = create(tableName, numThings, NULL, NULL, NULL, NULL, NULL);
-                    currentTable = &tables[numTables - 1];
+                    (*tables)[numTables - 1] = create(tableName, numThings, NULL, NULL, NULL, NULL, NULL);
+                    currentTable = &(*tables)[numTables - 1];
                     currTableIndex = numTables - 1;
                 }
 
                 for(int i = 0; i < numTables; i++)
-                    for(int j = 0; j < tables[i].numCols; j++)
-                        if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
-                            setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
+                    for(int j = 0; j < (*tables)[i].numCols; j++)
+                        if((*tables)[i].cols[j].hasForeignKey && (*tables)[i].cols[j].fKeyPointer == NULL)
+                            setForeignKeyPointer(&(*tables)[i].cols[j], numTables, (*tables));
 
                 break;
             case 2:
@@ -4137,15 +4223,15 @@ Table* userTableOperator(int numTables, Table* tables) {
                 switch(menuChoices[1]) {
                     case 1:
                         //PRINT the Master Table
-                        printTable(createMasterTable(tables, numTables));
+                        printTable(createMasterTable(*tables, numTables));
                         break;
                     case 2:
                         // "2. PRINT a table"
                         if(numTables > 0) {
                             printf("Which table would you like to print?\n");
-                            int tableIndex = tableMenu(numTables, tables);
+                            int tableIndex = tableMenu(numTables, *tables);
                             if(tableIndex > -1)
-                                printTable(tables[tableIndex]);
+                                printTable((*tables)[tableIndex]);
                         }
                         else
                             printf("There are no tables to print.\n");
@@ -4181,10 +4267,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 if(numTables > 0) {
                     printf("Which table would you like to become your current table?\n");
 
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                     }
                 }
                 else
@@ -4199,10 +4285,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
                 if(currentTable == NULL) {
                     printf("Which table would you like to choose from for renaming?\n");
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -4263,7 +4349,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         if(currentTable->name != NULL)
                             free(currentTable->name);
                         currentTable->name = strdup(tempName);
-                        checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
+                        checkDupTableNames(*tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
                 break;
@@ -4276,10 +4362,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
                 if(currentTable == NULL) {
                     printf("Which table would you like to select from?\n");
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -4388,12 +4474,12 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                 numTables++;
 
-                tables = realloc(tables, sizeof(Table) * numTables);
-                currentTable = &(tables[currTableIndex]);
+                *tables = realloc(*tables, sizeof(Table) * numTables);
+                currentTable = &((*tables)[currTableIndex]);
 
-                tables[numTables - 1] = cql_select(*currentTable, sel, numWheres, whereList, connectiveList);
+                (*tables)[numTables - 1] = cql_select(*currentTable, sel, numWheres, whereList, connectiveList);
 
-                currentTable = &tables[numTables - 1];
+                currentTable = &(*tables)[numTables - 1];
                 currTableIndex = numTables - 1;
 
                 for(int i = 0; i < numWheres; i++) {
@@ -4406,7 +4492,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                 whereList = NULL;
                 connectiveList = NULL;
 
-                checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
+                checkDupTableNames(*tables, numTables, currentTable->name, currTableIndex);
 
                 break;
 
@@ -4421,10 +4507,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                         }
                         if(currentTable == NULL) {
                             printf("Which table would you like to insert into?\n");
-                            int tempIndex = tableMenu(numTables, tables);
+                            int tempIndex = tableMenu(numTables, *tables);
                             if(tempIndex > -1) {
                                 currTableIndex = tempIndex;
-                                currentTable = &tables[currTableIndex];
+                                currentTable = &(*tables)[currTableIndex];
                                 printf("Here is your current table:\n");
                                 printTable(*currentTable);
                             }
@@ -4592,10 +4678,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                         }
                         if(currentTable == NULL) {
                             printf("Which table would you like to insert into?\n");
-                            int tempIndex = tableMenu(numTables, tables);
+                            int tempIndex = tableMenu(numTables, *tables);
                             if(tempIndex > -1) {
                                 currTableIndex = tempIndex;
-                                currentTable = &tables[currTableIndex];
+                                currentTable = &(*tables)[currTableIndex];
                                 printf("Here is your current table:\n");
                                 printTable(*currentTable);
                             }
@@ -4737,11 +4823,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                             } while(colPos < 0 || colPos > currentTable->numCols);
 
                             insertIntoCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
-                            setForeignKeyPointer(&currentTable->cols[colPos], numTables, tables);
+                            setForeignKeyPointer(&currentTable->cols[colPos], numTables, *tables);
                         }
                         else {
                             insertCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName);
-                            setForeignKeyPointer(&currentTable->cols[currentTable->numCols - 1], numTables, tables);
+                            setForeignKeyPointer(&currentTable->cols[currentTable->numCols - 1], numTables, *tables);
                         }
 
                         if(valueList != NULL) {
@@ -4765,10 +4851,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 }
                 if(currentTable == NULL) {
                     printf("Which table would you like to update?\n");
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -4996,7 +5082,7 @@ Table* userTableOperator(int numTables, Table* tables) {
                         free(colName);
                         attrInputByCol(&currentTable->cols[colIndex]);
                         printf("HI\n");
-                        setForeignKeyPointer(&currentTable->cols[colIndex], numTables, tables);
+                        setForeignKeyPointer(&currentTable->cols[colIndex], numTables, *tables);
                         printf("BYE\n");
                         break;
                 }
@@ -5014,10 +5100,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                     else
                         printf("Which table would you like to move columns in?\n");
 
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -5201,10 +5287,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                 if(currentTable == NULL) {
                     printf("Which table would you like to sort?\n");
 
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -5266,10 +5352,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                     else if(menuChoices[1] == 4)
                         printf("Which table would you like to copy?\n");
 
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -5410,16 +5496,16 @@ Table* userTableOperator(int numTables, Table* tables) {
                     case 4:
                         // "4. Make a COPY of current table"
                         numTables++;
-                        tables = realloc(tables, sizeof(Table) * numTables);
-                        currentTable = &tables[currTableIndex];
-                        tables[numTables - 1] = copyTable(*currentTable);
+                        *tables = realloc(*tables, sizeof(Table) * numTables);
+                        currentTable = &(*tables)[currTableIndex];
+                        (*tables)[numTables - 1] = copyTable(*currentTable);
 
                         printf("Table '%s' copied.\n", currentTable->name);
 
-                        currentTable = &tables[numTables - 1];
+                        currentTable = &(*tables)[numTables - 1];
                         currTableIndex = numTables - 1;
 
-                        checkDupTableNames(tables, numTables, currentTable->name, currTableIndex);
+                        checkDupTableNames(*tables, numTables, currentTable->name, currTableIndex);
                         break;
                 }
                 break;
@@ -5438,10 +5524,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                     else if(menuChoices[1] == 3)
                         printf("Which table would you like to paste a column into?\n");
 
-                    int tempIndex = tableMenu(numTables, tables);
+                    int tempIndex = tableMenu(numTables, *tables);
                     if(tempIndex > -1) {
                         currTableIndex = tempIndex;
-                        currentTable = &tables[currTableIndex];
+                        currentTable = &(*tables)[currTableIndex];
                         printf("Here is your current table:\n");
                         printTable(*currentTable);
                     }
@@ -5997,10 +6083,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                     else if(menuChoices[1] == 4)
                         printf("Which table would you like to delete?\n");
                     if(menuChoices[1] < 5 && menuChoices[1] > 0) {
-                        int tempIndex = tableMenu(numTables, tables);
+                        int tempIndex = tableMenu(numTables, *tables);
                         if(tempIndex > -1) {
                             currTableIndex = tempIndex;
-                            currentTable = &tables[currTableIndex];
+                            currentTable = &(*tables)[currTableIndex];
                             printf("Here is your current table:\n");
                             printTable(*currentTable);
                         }
@@ -6206,7 +6292,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                             numTables--;
                             for(int i = currTableIndex; i < numTables; i++)
-                                tables[i] = tables[i + 1];
+                                (*tables)[i] = (*tables)[i + 1];
 
                             currTableIndex = -1;
                             currentTable = NULL;
@@ -6217,14 +6303,14 @@ Table* userTableOperator(int numTables, Table* tables) {
                         int verified = 0;
                         int found = 0;
                         for(int i = 0; i < numTables; i++) {
-                            if(strstr(tables[i].name, "Selected from")) {
+                            if(strstr((*tables)[i].name, "Selected from")) {
                                 found = 1;
                                 if(verified == 1 || verifyDelete()) {
                                     verified = 1;
-                                    freeTable(&tables[i]);
+                                    freeTable(&(*tables)[i]);
 
                                     for(int j = i; j < numTables; j++)
-                                        tables[j] = tables[j + 1];
+                                        (*tables)[j] = (*tables)[j + 1];
 
                                     if(currTableIndex == i) {
                                         currTableIndex = -1;
@@ -6249,14 +6335,14 @@ Table* userTableOperator(int numTables, Table* tables) {
                         int verified = 0;
                         int found = 0;
                         for(int i = 0; i < numTables; i++) {
-                            if(strstr(tables[i].name, "Copy of")) {
+                            if(strstr((*tables)[i].name, "Copy of")) {
                                 found = 1;
                                 if(verified == 1 || verifyDelete()) {
                                     verified = 1;
-                                    freeTable(&tables[i]);
+                                    freeTable(&(*tables)[i]);
 
                                     for(int j = i; j < numTables; j++)
-                                        tables[j] = tables[j + 1];
+                                        (*tables)[j] = (*tables)[j + 1];
 
                                     if(currTableIndex == i) {
                                         currTableIndex = -1;
@@ -6280,11 +6366,11 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "7. DELETE database"
                         if(verifyDelete()) {
                             for(int i = 0; i < numTables; i++)
-                                freeTable(&tables[i]);
+                                freeTable(&(*tables)[i]);
 
-                            free(tables);
+                            free(*tables);
 
-                            tables = NULL;
+                            *tables = NULL;
 
                             numTables = 0;
 
@@ -6328,17 +6414,17 @@ Table* userTableOperator(int numTables, Table* tables) {
                             if(importedTable) {
                                 numTables++;
                                 if(numTables == 1)
-                                    tables = malloc(sizeof(Table));
+                                    *tables = malloc(sizeof(Table));
                                 else
-                                    tables = realloc(tables, sizeof(Table) * numTables);
-                                tables[numTables - 1] = *importedTable;
-                                checkDupTableNames(tables, numTables, tables[numTables - 1].name, numTables - 1);
-                                currentTable = &tables[numTables - 1];
+                                    *tables = realloc(*tables, sizeof(Table) * numTables);
+                                (*tables)[numTables - 1] = *importedTable;
+                                checkDupTableNames(*tables, numTables, (*tables)[numTables - 1].name, numTables - 1);
+                                currentTable = &(*tables)[numTables - 1];
                                 currTableIndex = numTables - 1;
                                 for(int i = 0; i < numTables; i++)
-                                    for(int j = 0; j < tables[i].numCols; j++)
-                                        if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
-                                            setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
+                                    for(int j = 0; j < (*tables)[i].numCols; j++)
+                                        if((*tables)[i].cols[j].hasForeignKey && (*tables)[i].cols[j].fKeyPointer == NULL)
+                                            setForeignKeyPointer(&(*tables)[i].cols[j], numTables, *tables);
                             }
                         }
                         break;
@@ -6367,17 +6453,17 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                                 if(numTablesLoaded > 0) {
                                     for(int i = 0; i < numTables; i++)
-                                        freeTable(&tables[i]);
-                                    if(tables != NULL)
-                                        free(tables);
+                                        freeTable(&(*tables)[i]);
+                                    if(*tables != NULL)
+                                        free(*tables);
                                     currentTable = NULL;
                                     currTableIndex = -1;
                                     numTables = numTablesLoaded;
-                                    tables = newTables;
+                                    *tables = newTables;
                                     for(int i = 0; i < numTables; i++)
-                                        for(int j = 0; j < tables[i].numCols; j++)
-                                            if(tables[i].cols[j].hasForeignKey && tables[i].cols[j].fKeyPointer == NULL)
-                                                setForeignKeyPointer(&tables[i].cols[j], numTables, tables);
+                                        for(int j = 0; j < (*tables)[i].numCols; j++)
+                                            if((*tables)[i].cols[j].hasForeignKey && (*tables)[i].cols[j].fKeyPointer == NULL)
+                                                setForeignKeyPointer(&(*tables)[i].cols[j], numTables, *tables);
                                 }
                             }
                         }
@@ -6399,10 +6485,10 @@ Table* userTableOperator(int numTables, Table* tables) {
                         // "1. EXPORT current table to file"
                         if(currentTable == NULL) {
                             printf("Which table would you like to export?\n");
-                            int tempIndex = tableMenu(numTables, tables);
+                            int tempIndex = tableMenu(numTables, *tables);
                             if(tempIndex > -1) {
                                 currTableIndex = tempIndex;
-                                currentTable = &tables[currTableIndex];
+                                currentTable = &(*tables)[currTableIndex];
                                 printf("Here is your current table:\n");
                                 printTable(*currentTable);
                             }
@@ -6488,7 +6574,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         if(saveChoice != 0)
                             for(int i = 0; i < numTables; i++)
-                                exportTable(tables[i], filename, 0);
+                                exportTable((*tables)[i], filename, 0);
 
                         printf("\nDatabase saved successfully to %s.\n", filename);
                         break;
@@ -6543,7 +6629,7 @@ Table* userTableOperator(int numTables, Table* tables) {
 
                         if(saveChoice != 0) {
                             for(int i = 0; i < numTables; i++)
-                                exportTable(tables[i], filename, 0);
+                                exportTable((*tables)[i], filename, 0);
 
                             printf("Saving");
                             for(int i = 0; i < 3; i++) {
@@ -6598,7 +6684,7 @@ Table* userTableOperator(int numTables, Table* tables) {
     // colCopy.name = NULL;
 
 
-    return tables;
+    return numTables;
 
 }
 
