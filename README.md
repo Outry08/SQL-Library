@@ -15,9 +15,9 @@ Execute the program with ./cql
 
 ## Roadmap
 - Valgrind and fix all leaks.
-    - Change everything to do with the list creator functions from *s to []s
 - Add error return numbers to all functions.
 - Add full library documentation.
+    - Up next: initColAttrs
 
 If I feel like it:
 - Add join statements.
@@ -26,7 +26,6 @@ If I feel like it:
 - COMPLETE.
 
 ## Potential Additions At A Later Date
-
 - Group By in select statements.
 - Expand select statements to be able to refer to other tables.
 - Multi-layered Sorting.
