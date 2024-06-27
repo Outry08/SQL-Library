@@ -149,7 +149,8 @@ int compare(Column column, int valIndex, char* comparison, void* value); //Imple
 char* oppComp(char* comparison); //Implemented
 void freeTable(Table* table); //Implemented
 void freeDatabase(Table* tables, int numTables); //Implemented
-void freeList(void** nameList, int numNames);
+void freeList(void** nameList, int numNames); //Implemented
+void freeWhere(Where* where); //Implemented
 
 Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented
