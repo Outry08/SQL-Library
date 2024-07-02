@@ -8,14 +8,14 @@ int main(int argc, char const* argv[]) {
     char** names = nameList(3, "Char Col", "Decimal Col", "Integer Col");
     int* types = typeList(3, CHAR, DECIMAL, INTEGER);
     tables[0] = create("My Table", 3, names, types, NULL, NULL, NULL);
-    freeList(names, 3);
+    freeList((void**)names, 3);
     free(types);
 
     names = nameList(2, "Decimal Col", "Char Col");
     types = typeList(2, DECIMAL, CHAR);
     void** values = valueList(2, types, 44.55, "Luigi");
     insertRow(&tables[0], 2, names, values);
-    freeList(names, 2);
+    freeList((void**)names, 2);
     free(types);
     freeList(values, 2);
 
@@ -26,7 +26,7 @@ int main(int argc, char const* argv[]) {
     values = valueList(1, types, "Mario");
     insertRow(&tables[0], 1, names, values);
     printTable(tables[0]);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
 
@@ -34,7 +34,7 @@ int main(int argc, char const* argv[]) {
     types = typeList(1, INTEGER);
     values = valueList(1, types, 4);
     insertRow(&tables[0], 1, names, values);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
 
@@ -42,7 +42,7 @@ int main(int argc, char const* argv[]) {
     types = typeList(3, INTEGER, DECIMAL, CHAR);
     values = valueList(3, types, 44, 88.77, "WAHHLUIGI");
     insertRow(&tables[0], 3, names, values);
-    freeList(names, 3);
+    freeList((void**)names, 3);
     free(types);
     freeList(values, 3);
     printTable(tables[0]);
@@ -55,7 +55,7 @@ int main(int argc, char const* argv[]) {
     values = valueList(1, types, 9999.999);
     Where* wheres = whereList(1, where1);
     update(&tables[0], 1, names, values, 1, wheres, NULL);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
@@ -72,7 +72,7 @@ int main(int argc, char const* argv[]) {
     wheres = whereList(2, where1, where2);
     char* conns = connectiveList(1, '|');
     update(&tables[0], 2, names, values, 2, wheres, conns);
-    freeList(names, 2);
+    freeList((void**)names, 2);
     free(types);
     freeList(values, 2);
     free(wheres);
@@ -86,7 +86,7 @@ int main(int argc, char const* argv[]) {
     values = valueList(1, types, "WAAAAARIOOOOOOO");
     wheres = whereList(1, where3);
     update(&tables[0], 1, names, values, 1, wheres, NULL);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
@@ -96,7 +96,7 @@ int main(int argc, char const* argv[]) {
     types = typeList(1, DECIMAL);
     values = valueList(1, types, 444.0);
     insertRow(&tables[0], 1, names, values);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
 
@@ -109,7 +109,7 @@ int main(int argc, char const* argv[]) {
     wheres = whereList(3, where3, where2, where1);
     conns = connectiveList(2, '&', '|');
     update(&tables[0], 1, names, values, 3, wheres, conns);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
@@ -124,7 +124,7 @@ int main(int argc, char const* argv[]) {
     conns = connectiveList(1, '&');
 
     update(&tables[0], 1, names, values, 2, wheres, conns);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
@@ -138,7 +138,7 @@ int main(int argc, char const* argv[]) {
     wheres = whereList(1, where3);
 
     update(&tables[0], 1, names, values, 1, wheres, NULL);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     free(types);
     freeList(values, 1);
     free(wheres);
@@ -177,7 +177,7 @@ int main(int argc, char const* argv[]) {
 
     names = nameList(2, "Decimal Col", "Char Col");
     Select select1 = newSelect(2, names, 0);
-    freeList(names, 1);
+    freeList((void**)names, 1);
 
     wheres = whereList(2, where5, where3);
     conns = connectiveList(1, '|');
@@ -187,7 +187,7 @@ int main(int argc, char const* argv[]) {
 
     names = nameList(1, "Char Col");
     Select select2 = newSelect(1, names, 0);
-    freeList(names, 1);
+    freeList((void**)names, 1);
     Where where9 = newWhere("Char Col", "=", "WAHHLUIGI");
 
     wheres = whereList(2, where3, where9);
@@ -200,7 +200,7 @@ int main(int argc, char const* argv[]) {
     types = typeList(3, CHAR, INTEGER, DECIMAL);
     values = valueList(3, types, "Princess Peach", 777, 19.64);
     insertIntoRow(tables, 3, names, values, 3);
-    freeList(names, 3);
+    freeList((void**)names, 3);
     free(types);
     freeList(values, 3);
 
@@ -226,6 +226,9 @@ int main(int argc, char const* argv[]) {
     freeWhere(&where8);
     freeWhere(&where9);
 
+    freeSelect(&select1);
+    freeSelect(&select2);
+
     return 0;
 }
 
@@ -247,6 +250,10 @@ Table create(char* tableName, int numCols, char** colNames, int* colTypes, char*
 
     if(!checkInvalidName(tableName)) {
         fprintf(stderr, "INVALID TABLE NAME\n");
+        table.name = NULL;
+        table.cols = NULL;
+        table.numCols = -1;
+        table.numRows = -1;
         return table;
     }
 
@@ -1473,9 +1480,25 @@ void freeDatabase(Table* tables, int numTables) {
  * @param where - The where statement to have its members freed.
 **/
 void freeWhere(Where* where) {
-    free(where->searchColName);
-    free(where->comparison);
-    free(where->searchValue);
+    if(where->searchColName)
+        free(where->searchColName);
+    if(where->comparison)
+        free(where->comparison);
+    if(where->searchValue)
+        free(where->searchValue);
+}
+
+/**
+ * A function to free a select struct's members.
+ * @param select - The select statement to have its members freed.
+**/
+void freeSelect(Select* select) {
+    if(select->colNames) {
+        for(int i = 0; i < select->numCols; i++)
+            if(select->colNames[i])
+                free(select->colNames[i]);
+        free(select->colNames);
+    }
 }
 
 /**
@@ -1574,8 +1597,17 @@ Table cql_select(Table table, Select sel, int numWheres, Where* wheres, char* co
     tableCopy.name = strdup(table.name);
 
     //Selecting what meets the qualifications is the same as deleting what does not meet the qualifications
-    if(numWheres > 0)
-        delete(&tableCopy, numWheres, notWheres(numWheres, wheres), notConnectives(numWheres - 1, conns));
+    if(numWheres > 0) {
+        Where* oppWheres = notWheres(numWheres, wheres);
+        char* oppConns = notConnectives(numWheres - 1, conns);
+
+        delete(&tableCopy, numWheres, oppWheres, oppConns);
+
+        for(int i = 0; i < numWheres; i++)
+            freeWhere(&oppWheres[i]);
+        free(oppWheres);
+        free(oppConns);
+    }
 
     Table selectedTable;
 
@@ -2119,12 +2151,14 @@ void deleteDuplicateValRows(Table* table, int numCols, char** colNames) {
             else if(table->cols[i].type == DATE)
                 fprintf(stderr, "DATE datatypes functionality to be implemented.\n");
         }
-
     }
-
 }
 
-
+/**
+ * Takes the given table and makes a new table with all of its attributes copied over.
+ * @param table - The table to be copied.
+ * @return - The copy of the given table.
+**/
 Table copyTable(Table table) {
     Table newTable;
 
@@ -2140,12 +2174,18 @@ Table copyTable(Table table) {
 
     newTable.cols = malloc(sizeof(Column) * newTable.numCols);
 
+    //Copying all the columns
     for(int i = 0; i < newTable.numCols; i++)
         newTable.cols[i] = copyColumn(table.cols[i]);
 
     return newTable;
 }
 
+/**
+ * Takes the given column and makes a new column with all of its attributes copied over.
+ * @param col - The column to be copied.
+ * @return - The copy of the given column.
+**/
 Column copyColumn(Column col) {
     Column colCopy;
 
@@ -2153,6 +2193,7 @@ Column copyColumn(Column col) {
     colCopy.type = col.type;
     colCopy.numRows = col.numRows;
 
+    //Copying all the attributes
     colCopy.autoIncrement = col.autoIncrement;
     if(col.fKeyName)
         colCopy.fKeyName = strdup(col.fKeyName);
@@ -2164,6 +2205,7 @@ Column copyColumn(Column col) {
     colCopy.isPrimaryKey = col.isPrimaryKey;
     colCopy.notNull = col.notNull;
 
+    //Copying default value
     colCopy.defaultValue.isNULL = col.defaultValue.isNULL;
     if(!colCopy.defaultValue.isNULL) {
         if(colCopy.type == INTEGER)
@@ -2178,6 +2220,7 @@ Column copyColumn(Column col) {
             fprintf(stderr, "DATE datatype functionality coming soon.\n");
     }
 
+    //Copying rows
     colCopy.values = malloc(sizeof(Value) * colCopy.numRows);
     for(int i = 0; i < colCopy.numRows; i++) {
         colCopy.values[i].isNULL = col.values[i].isNULL;
@@ -2198,6 +2241,13 @@ Column copyColumn(Column col) {
     return colCopy;
 }
 
+/**
+ * Takes a table and row number to create a copy of the desired row that is independet of any table. The row copy retains
+   the column names from which it originated.
+ * @param table - The table that has the desired row to copy.
+ * @param rowNum - The index of the desired row to copy. (0 indexed)
+ * @return - A pointer to a LoneValue struct, being the copied row that is independent of any table.
+**/
 LoneValue* copyRow(Table* table, int rowNum) {
 
     LoneValue* rowCopy = malloc(sizeof(LoneValue) * table->numCols);
@@ -2220,9 +2270,14 @@ LoneValue* copyRow(Table* table, int rowNum) {
     }
 
     return rowCopy;
-
 }
 
+/**
+ * Takes a where list and reverses all its conditions to make the opposite conditions. I.e. Number > 3 becomes Number <= 3.
+ * @param numWheres - The number of where statements in the where list.
+ * @param whereList - The array of Where structs.
+ * @return - A new Where array of opposite statements to the ones provided.
+**/
 Where* notWheres(int numWheres, Where* whereList) {
     if(whereList == NULL || numWheres <= 0)
         return NULL;
@@ -2238,6 +2293,12 @@ Where* notWheres(int numWheres, Where* whereList) {
     return notWheres;
 }
 
+/**
+ * Takes a connective list and reverses all its conditions to make the opposite conditions. I.e. & becomes |.
+ * @param numConns - The number of connectives in the list.
+ * @param conns - The array of connective characters.
+ * @return - A new character array of opposite connectives to the ones provided.
+**/
 char* notConnectives(int numConns, char* conns) {
     if(conns == NULL || numConns + 1 <= 0)
         return NULL;
@@ -2266,8 +2327,18 @@ char* notConnectives(int numConns, char* conns) {
     return notConns;
 }
 
+/**
+ * Takes a column name to find and return the column in the given table with that name. Also returns the index of that
+   column through the colIndex parameter with call by reference.
+ * @param table - The table that contains the desired column.
+ * @param colName - The name of the desired column.
+ * @param colIndex - An address of an integer to be filled with the index of the found column.
+ * @return - The found column upon success.
+ * @return - An error column with a datatype of -1 upon failure.
+**/
 Column nameToCol(Table* table, char* colName, int* colIndex) {
 
+    //Finding the desired column
     if(colName != NULL) {
         for(int i = 0; i < table->numCols; i++) {
             if(strcmp(table->cols[i].name, colName) == 0) {
@@ -2278,6 +2349,7 @@ Column nameToCol(Table* table, char* colName, int* colIndex) {
         }
     }
 
+    //Creating the error column if the column is not found.
     Column errCol;
     errCol.name = "COL NOT FOUND";
     errCol.type = -1;
@@ -2287,6 +2359,13 @@ Column nameToCol(Table* table, char* colName, int* colIndex) {
     return errCol;
 }
 
+/**
+ * A boolean function to check if a column exists in a given table.
+ * @param table - The table to check if a column exists in.
+ * @param colName - The name of the column to check if it exists.
+ * @return - 1 if column is found.
+ * @return - 0 if column is not found.
+**/
 int containsCol(Table table, char* colName) {
     for(int i = 0; i < table.numCols; i++)
         if(strcmp(table.cols[i].name, colName) == 0)
@@ -2295,6 +2374,15 @@ int containsCol(Table table, char* colName) {
     return 0;
 }
 
+/**
+ * Takes a comparison and a value and makes the appropriate comparison between them and a given column with a row index. Necessary because of the different datatype behaviours. Also takes NULL values into account.
+ * @param column - The column involved in the comparison.
+ * @param valIndex - The index of the value within the column to be compared.
+ * @param comparison - The comparison to be evaluated.
+ * @param value - The value to be compared.
+ * @return - The result of the comparison.
+ * @return - -1 upon an invalid comparison.
+**/
 int compare(Column column, int valIndex, char* comparison, void* value) {
 
     if(strcmp(comparison, "=") == 0 || strcmp(comparison, "==") == 0) {
@@ -2314,7 +2402,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
         else if(value == NULL)
             return 0;
@@ -2331,7 +2419,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else if(strcmp(comparison, "<") == 0) {
         if(column.values[valIndex].isNULL) {
@@ -2350,7 +2438,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
         else if(value == NULL)
             return 1;
@@ -2367,7 +2455,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else if(value == NULL)
         return 0;
@@ -2388,7 +2476,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
 
         else if(column.type == CHAR)
@@ -2404,7 +2492,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else if(strcmp(comparison, ">") == 0) {
         if(column.values[valIndex].isNULL) {
@@ -2423,7 +2511,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
         else if(value == NULL)
             return 1;
@@ -2440,7 +2528,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else if(strcmp(comparison, ">=") == 0) {
         if(column.values[valIndex].isNULL) {
@@ -2459,7 +2547,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
         else if(value == NULL)
             return 0;
@@ -2476,7 +2564,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else if(strcmp(comparison, "<>") == 0 || strcmp(comparison, "!=") == 0) {
         if(column.values[valIndex].isNULL) {
@@ -2495,7 +2583,7 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
                 return 0;
             }
             else
-                return 0;
+                return -1;
         }
         else if(value == NULL)
             return 1;
@@ -2512,15 +2600,20 @@ int compare(Column column, int valIndex, char* comparison, void* value) {
             return 0;
         }
         else
-            return 0;
+            return -1;
     }
     else {
         fprintf(stderr, "Error: Invalid comparison entered.\n");
-        return 0;
+        return -1;
     }
 
 }
 
+/**
+ * Boolean function to check if a given comparison is a valid one. Good for validating user input.
+ * @param comparison - The comparison to have validated.
+ * @return - 1 if valid, 0 if invalid.
+**/
 int isValidComp(char* comparison) {
     if(strcmp(comparison, "=") == 0 || strcmp(comparison, "==") == 0)
         return 1;
@@ -2538,21 +2631,27 @@ int isValidComp(char* comparison) {
         return 0;
 }
 
+/**
+ * Takes a comparison string and makes a new string with the opposite comparison. I.e. < becomes >=.
+ * @param comparison - The comparison to have reversed.
+ * @return - A new string with the opposite comparison.
+ * @return - NULL upon failure.
+**/
 char* oppComp(char* comparison) {
     char* oppComp;
 
     if(strcmp(comparison, "=") == 0 || strcmp(comparison, "==") == 0)
-        oppComp = "!=";
+        oppComp = strdup("!=");
     else if(strcmp(comparison, "<") == 0)
-        oppComp = ">=";
+        oppComp = strdup(">=");
     else if(strcmp(comparison, "<=") == 0)
-        oppComp = ">";
+        oppComp = strdup(">");
     else if(strcmp(comparison, ">") == 0)
-        oppComp = "<=";
+        oppComp = strdup("<=");
     else if(strcmp(comparison, ">=") == 0)
-        oppComp = "<";
+        oppComp = strdup("<");
     else if(strcmp(comparison, "<>") == 0 || strcmp(comparison, "!=") == 0)
-        oppComp = "==";
+        oppComp = strdup("==");
     else {
         fprintf(stderr, "Error: Invalid comparison entered.\n");
         oppComp = NULL;
@@ -2561,10 +2660,21 @@ char* oppComp(char* comparison) {
     return oppComp;
 }
 
+/**
+ * A boolean function to evalue a string and see if it is an aggregate function. Checks if the string contains "SUM(" or "COUNT(", etc.
+ * @param name - The string to be checked if it is an aggregate function.
+ * @return - Whether or not the string is an aggregate function.
+**/
 int isAggregate(char* name) {
     return strstr(name, "COUNT(") || strstr(name, "SUM(") || strstr(name, "AVG(") || strstr(name, "MAX(") || strstr(name, "MIN(");
 }
 
+/**
+ * Takes a string and returns a string of just the aggregate function. Eg. "COUNT(Names)" returns "COUNT"
+ * @param name - The string to have its aggregate name retrieved.
+ * @return - A string consisting of the aggregate name upon success.
+ * @return - The name parameter upon failure.
+ */
 char* getAggregateName(char* name) {
     if(strstr(name, "COUNT("))
         return "COUNT";
@@ -2580,6 +2690,12 @@ char* getAggregateName(char* name) {
         return name;
 }
 
+/**
+ * Retrieves an returns the column name that is inside an aggregate function. Eg. "SUM(Numbers)" returns "Numbers"
+ * @param name - The string consisting of an aggregate function.
+ * @return - The column name from within the aggregate function.
+ * @return - The unaltered name parameter if not an aggregate function.
+**/
 char* getColNameFromAggregate(char* name) {
     char* colName = malloc(sizeof(char) * MAX_LEN);
 
@@ -2591,18 +2707,24 @@ char* getColNameFromAggregate(char* name) {
     else
         return NULL;
 
-    for(int i = 0; i < strlen(colName); i++) {
-        if(colName[i] == ')') {
-            colName[i] = '\0';
+    int i;
+    for(i = 0; i < strlen(colName); i++)
+        if(colName[i] == ')')
             break;
-        }
-    }
+    colName[i] = '\0';
 
     colName = realloc(colName, sizeof(char) * (strlen(colName) + 1));
 
     return colName;
 }
 
+/**
+ * Acts as a constructor for a WHERE struct.
+ * @param searchColName - The column name of the WHERE statement.
+ * @param comparison - The comparison of the WHERE statement.
+ * @param searchValue - The value of the WHERE statement being compared.
+ * @return - A Where struct with the parameter attributes assigned to it.
+**/
 Where newWhere(char* searchColName, char* comparison, void* searchValue) {
     Where newWhere;
     newWhere.searchColName = strdup(searchColName);
@@ -2612,6 +2734,14 @@ Where newWhere(char* searchColName, char* comparison, void* searchValue) {
 
     return newWhere;
 }
+
+/**
+ * Acts as a constructor for a SELECT struct.
+ * @param numCols - The number of columns that will be in the SELECT statement.
+ * @param colNames - The array of column names to be included in the SELECT statement.
+ * @param distinct - Whether or not the SELECT statement will omit duplicate values.
+ * @return - A Select struct with the parameter attributes assigned to it.
+**/
 Select newSelect(int numCols, char** colNames, int distinct) {
     Select select;
 
@@ -2627,6 +2757,13 @@ Select newSelect(int numCols, char** colNames, int distinct) {
 
     return select;
 }
+
+/**
+ * A helper function to easily create an array of strings out of the parameter strings.
+ * @param numNames - The number of strings being provided in the following parameters.
+ * @param ... - Each subsequent parameter is a string to be added into the string array.
+ * @return - An array of the strings given in the parameters.
+**/
 char** nameList(int numNames, ...) {
     if(numNames <= 100) {
         va_list ap;
@@ -2644,15 +2781,28 @@ char** nameList(int numNames, ...) {
     else
         return NULL;
 }
-void freeList(void** nameList, int numNames) {
-    if(nameList) {
-        for(int i = 0; i < numNames; i++)
-            if(nameList[i])
-                free(nameList[i]);
-        free(nameList);
+
+/**
+ * Frees a two dimensional array of allocated values.
+ * @param list - The array to be freed.
+ * @param numItems - The number of items in the given array.
+**/
+void freeList(void** list, int numItems) {
+    if(list) {
+        for(int i = 0; i < numItems; i++)
+            if(list[i])
+                free(list[i]);
+        free(list);
     }
 }
 
+/**
+ * A helper function to easily create an array of type-indepented values out of the parameter values.
+ * @param numValues - The number of values being provided in the following parameters.
+ * @param types - An array containing the datatypes of values being provided in the following parameters.
+ * @param ... - Each subsequent parameter is a value to be added into the value array.
+ * @return - An array of the values given in the parameters.
+**/
 void** valueList(int numValues, int* types, ...) {
 
     static int intVal;
@@ -2694,6 +2844,12 @@ void** valueList(int numValues, int* types, ...) {
     return valueList;
 }
 
+/**
+ * A helper function to easily create an array of datatype (integer) values out of the parameter integers.
+ * @param numTypes - The number of types being provided in the following parameters.
+ * @param ... - Each subsequent parameter is a datatype to be added into the type array.
+ * @return - An array of the datatypes given in the parameters.
+**/
 int* typeList(int numTypes, ...) {
     va_list ap;
     int* typeList = malloc(sizeof(int) * numTypes);
@@ -2706,6 +2862,13 @@ int* typeList(int numTypes, ...) {
 
     return typeList;
 }
+
+/**
+ * A helper function to easily create an array of Where structs out of the parameter Where structs.
+ * @param numWheres - The number of Where structs being provided in the following parameters.
+ * @param ... - Each subsequent parameter is a Where struct to be added into the Where array.
+ * @return - An array of the Where structs given in the parameters.
+**/
 Where* whereList(int numWheres, ...) {
     va_list ap;
     va_start(ap, numWheres);
@@ -2719,8 +2882,14 @@ Where* whereList(int numWheres, ...) {
 
     return wheres;
 }
-char* connectiveList(int numConns, ...) {
 
+/**
+ * A helper function to easily create an array of connective chars out of the parameter chars.
+ * @param numConns - The number of connectives being provided in the following parameters.
+ * @param ... - Each subsequent parameter is a char to be added into the connective array.
+ * @return - An array of the connectives given in the parameters.
+**/
+char* connectiveList(int numConns, ...) {
     va_list ap;
     va_start(ap, numConns);
 
@@ -2733,30 +2902,51 @@ char* connectiveList(int numConns, ...) {
     va_end(ap);
 
     return conns;
-
 }
 
+/**
+ * Creates a master table out of an array of tables. The master table is a table containing general info about each table
+   in the database. (I.e. Table name, number of rows, and number of columns)
+ * @param tableList - The array of tables to have the master table made for.
+ * @param numTables - The number of tables in the tableList array.
+ * @return - The master table.
+ */
 Table createMasterTable(Table* tableList, int numTables) {
-    Table masterTable = create("MASTER", 3, nameList(3, "Name", "Num Cols", "Num Rows"), typeList(3, CHAR, INTEGER, INTEGER), NULL, NULL, NULL);
+    char** names = nameList(3, "Name", "Num Cols", "Num Rows");
+    int* types = typeList(3, CHAR, INTEGER, INTEGER);
+
+    Table masterTable = create("MASTER", 3, names, types, NULL, NULL, NULL);
+
     for(int i = 0; i < numTables;i++) {
-        insertRow(&masterTable, 3, nameList(3, "Name", "Num Cols", "Num Rows"), valueList(3, typeList(3, CHAR, INTEGER, INTEGER), tableList[i].name, tableList[i].numCols, tableList[i].numRows));
+        void** values = valueList(3, types, tableList[i].name, tableList[i].numCols, tableList[i].numRows);
+        insertRow(&masterTable, 3, names, values);
+        freeList(values, 3);
     }
+
+    freeList((void**)names, 3);
+    free(types);
 
     return masterTable;
 }
 
+/**
+ * Prints a table in a classic formatted row and column visual.
+ * @param table - The table to be printed.
+**/
 void printTable(Table table) {
 
     int colWidth = 23;
 
     printf("\n");
-    for(int i = 0; i < colWidth * table.numCols / 2; i++) {
+    //Centering the table name
+    for(int i = 0; i < colWidth * table.numCols / 2; i++)
         printf(" ");
-    }
     printf("TABLE: %s", table.name);
     char printString[MAX_LEN];
 
     printf("\n\t");
+
+    //Printing the column letters A, B, C, ... in the centre of their respective column
     for(int i = 0; i < table.numCols; i++) {
         printf("\e[1m%-*s\e[m", colWidth / 2, " ");
         printf("%s", intToLetter(i + 1));
@@ -2765,12 +2955,13 @@ void printTable(Table table) {
 
     printSeparatorLine(table.numCols, 0);
 
+    //\e is used to fill the whole cell of the table value
     for(int i = 0; i < table.numCols; i++)
         printf("| \e[1m%-*s\e[m", colWidth - 2, table.cols[i].name);
     printf("|");
 
+    //Printing row by row like a printer
     for(int i = 0; i < table.numRows; i++) {
-
         if(i <= 9 || table.numRows - i <= 9) {
             printSeparatorLine(table.numCols, i + 1);
             for(int j = 0; j < table.numCols; j++) {
@@ -2779,6 +2970,7 @@ void printTable(Table table) {
 
                 else if(table.cols[j].type == CHAR) {
                     sprintf(printString, "%s", table.cols[j].values[i].val.CHAR);
+                    //Cutting of long string values
                     if(strlen(printString) > 18) {
                         printString[18] = '\0';
                         printString[17] = ' ';
@@ -2803,12 +2995,12 @@ void printTable(Table table) {
             }
             printf("|");
         }
+        //Cutting the middle rows of the table if there's a large number of rows.
         else if(i == 10) {
             printSeparatorLine(table.numCols, 0);
             printf("\n\t");
-            for(int i = 0; i < table.numCols * 23 + 1; i++) {
+            for(int i = 0; i < table.numCols * 23 + 1; i++)
                 printf(".");
-            }
             printf("\n");
         }
     }
@@ -2817,12 +3009,16 @@ void printTable(Table table) {
     printf("\n");
 }
 
+/**
+ * Prints a line to separate each row of a table.
+ * @param numCols - The number of columns to have a separator line for.
+ * @param rowNum - The row number to print to the left of the row.
+**/
 void printSeparatorLine(int numCols, int rowNum) {
     printf("\n\t+");
     for(int j = 0; j < numCols; j++) {
-        for(int k = 0; k < 22; k++) {
+        for(int k = 0; k < 22; k++)
             printf("-");
-        }
         printf("+");
     }
     if(rowNum > 0)
@@ -2831,14 +3027,18 @@ void printSeparatorLine(int numCols, int rowNum) {
         printf("\n\t");
 }
 
+/**
+ * Prints a row of the given table.
+ * @param table - The table to have a row printed from.
+ * @param rowIndex - The row index of the table to print. (0 indexed)
+**/
 void printRow(Table table, int rowIndex) {
 
     printf("\t");
     for(int i = 0; i < table.numCols; i++) {
         printf(" | ");
-        if(table.cols[i].values[rowIndex].isNULL) {
+        if(table.cols[i].values[rowIndex].isNULL)
             printf("NULL");
-        }
         else {
             if(table.cols[i].type == INTEGER)
                 printf("%d", table.cols[i].values[rowIndex].val.INTEGER);
@@ -2860,6 +3060,11 @@ void printRow(Table table, int rowIndex) {
     printf(" | \n");
 }
 
+/**
+ * Prints a LoneRow that is independent of a table.
+ * @param row - The row to be printed.
+ * @param numValues - The number of values the row has.
+**/
 void printLoneRow(LoneValue* row, int numValues) {
     printf("\t");
 
@@ -2872,9 +3077,8 @@ void printLoneRow(LoneValue* row, int numValues) {
 
     for(int i = 0; i < numValues; i++) {
         printf(" | ");
-        if(row[i].value.isNULL) {
+        if(row[i].value.isNULL)
             printf("NULL");
-        }
         else {
             if(row[i].type == INTEGER)
                 printf("%d", row[i].value.val.INTEGER);
@@ -2896,14 +3100,17 @@ void printLoneRow(LoneValue* row, int numValues) {
     printf(" | \n");
 }
 
+/**
+ * Prints a column independent of any table.
+ * @param col - The column to print.
+**/
 void printColumn(Column col) {
 
     printf("\t| \e[1m%s\e[m |\n", col.name);
     for(int i = 0; i < col.numRows; i++) {
         printf("\t| ");
-        if(col.values[i].isNULL) {
+        if(col.values[i].isNULL)
             printf("NULL");
-        }
         else {
             if(col.type == INTEGER)
                 printf("%d", col.values[i].val.INTEGER);
@@ -4127,10 +4334,13 @@ int userTableOperator(int numTables, Table** tables) {
             case 2:
                 //"2. PRINT"
                 switch(menuChoices[1]) {
-                    case 1:
+                    case 1: {
                         //PRINT the Master Table
-                        printTable(createMasterTable(*tables, numTables));
+                        Table master = createMasterTable(*tables, numTables);
+                        printTable(master);
+                        freeTable(&master);
                         break;
+                    }
                     case 2:
                         // "2. PRINT a table"
                         if(numTables > 0) {

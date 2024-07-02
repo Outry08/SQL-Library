@@ -151,6 +151,7 @@ void freeTable(Table* table); //Implemented
 void freeDatabase(Table* tables, int numTables); //Implemented
 void freeList(void** nameList, int numNames); //Implemented
 void freeWhere(Where* where); //Implemented
+void freeSelect(Select* select); //Implemented
 
 Table createMasterTable(Table* tableList, int numTables); //Implemented
 void printTable(Table table); //Implemented

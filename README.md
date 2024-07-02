@@ -17,15 +17,13 @@ Execute the program with ./cql
 - Valgrind and fix all leaks.
 - Add error return numbers to all functions.
 - Add full library documentation.
-    - Up next: copyTable
-
-If I feel like it:
-- Add join statements.
-- Add DATE datatype functionality.
+    - Up next: intToLetter
 
 - COMPLETE.
 
 ## Potential Additions At A Later Date
+- Add join statements.
+- Add DATE datatype functionality.
 - Group By in select statements.
 - Expand select statements to be able to refer to other tables.
 - Multi-layered Sorting.
@@ -44,6 +42,7 @@ If I feel like it:
 - Upon importing SQL instructions, they cannot be all on one line.
 - Program is slow with larger tables.
 - Foreign Keys are not validated when inserting unless the 'setForeignKey' function is called after a foreign key is added/changed.
+- Faulters if imported string table values are more than 100 characters long.
 
 ## Project status
 Ongoing.
