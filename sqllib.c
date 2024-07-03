@@ -155,7 +155,9 @@ int main(int argc, char const* argv[]) {
     where1.comparison = strdup("!=");
     wheres = whereList(7, where5, where3, where6, where4, where1, where7, where8);
     conns = connectiveList(6, '|', '&', '|', '|', '&', '&');
+    printf("YEETEY\n");
     delete(&tables[0], 7, wheres, conns);
+    printf("HEHE\n");
     free(wheres);
     free(conns);
 
@@ -321,7 +323,7 @@ void insertRow(Table* table, int numValues, char** colNames, void** values) {
             if(table->cols[i].type == CHAR) {
                 table->cols[i].values[table->numRows - 1].val.CHAR = strdup(table->cols[i].defaultValue.val.CHAR);
                 if(table->cols[i].autoIncrement)
-                    table->cols[i].defaultValue.val.CHAR = intToLetter(letterToInt(table->cols[i].defaultValue.val.CHAR) + 1);
+                    intToLetter(letterToInt(table->cols[i].defaultValue.val.CHAR) + 1, table->cols[i].defaultValue.val.CHAR);
             }
             else if(table->cols[i].type == INTEGER) {
                 table->cols[i].values[table->numRows - 1].val.INTEGER = table->cols[i].defaultValue.val.INTEGER;
@@ -540,7 +542,7 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
             if(table->cols[i].type == CHAR) {
                 table->cols[i].values[rowNum].val.CHAR = strdup(table->cols[i].defaultValue.val.CHAR);
                 if(table->cols[i].autoIncrement)
-                    table->cols[i].defaultValue.val.CHAR = intToLetter(letterToInt(table->cols[i].defaultValue.val.CHAR) + 1);
+                    intToLetter(letterToInt(table->cols[i].defaultValue.val.CHAR) + 1, table->cols[i].defaultValue.val.CHAR);
             }
             else if(table->cols[i].type == INTEGER) {
                 table->cols[i].values[rowNum].val.INTEGER = table->cols[i].defaultValue.val.INTEGER;
@@ -571,7 +573,7 @@ void insertIntoRow(Table* table, int numValues, char** colNames, void** values, 
                 if(currCol.type == CHAR) {
                     currCol.values[rowNum].val.CHAR = strdup(currCol.defaultValue.val.CHAR);
                     if(currCol.autoIncrement)
-                        strcpy(currCol.defaultValue.val.CHAR, intToLetter(letterToInt(currCol.defaultValue.val.CHAR) + 1));
+                        intToLetter(letterToInt(currCol.defaultValue.val.CHAR) + 1, currCol.defaultValue.val.CHAR);
                 }
                 else if(currCol.type == INTEGER) {
                     currCol.values[rowNum].val.INTEGER = currCol.defaultValue.val.INTEGER;
@@ -1015,7 +1017,8 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                             }
                         }
 
-                        col->defaultValue.val.CHAR = intToLetter(maxVal + 1);
+                        col->defaultValue.val.CHAR = malloc(sizeof(char) * MAX_LEN);
+                        intToLetter(maxVal + 1, col->defaultValue.val.CHAR);
                     }
                 }
 
@@ -1031,7 +1034,7 @@ void assignColAttrs(Column* col, char* attrs, void* defaultVal, char* foreignKey
                         }
                         else if(col->type == CHAR) {
                             col->values[i].val.CHAR = strdup(col->defaultValue.val.CHAR);
-                            col->defaultValue.val.CHAR = intToLetter(letterToInt(col->defaultValue.val.CHAR) + 1);
+                            intToLetter(letterToInt(col->defaultValue.val.CHAR) + 1, col->defaultValue.val.CHAR);
                         }
                         else if(col->type == BOOL)
                             col->values[i].val.BOOL = col->defaultValue.val.BOOL;
@@ -1273,7 +1276,7 @@ void update(Table* table, int numUpdCols, char** colNames, void** newValues, int
                                     free(currCol.values[prevGoodJs[l]].val.CHAR);
                                 currCol.values[prevGoodJs[l]].val.CHAR = strdup(currCol.defaultValue.val.CHAR);
                                 if(currCol.autoIncrement)
-                                    currCol.defaultValue.val.CHAR = intToLetter(letterToInt(currCol.defaultValue.val.CHAR) + 1);
+                                    intToLetter(letterToInt(currCol.defaultValue.val.CHAR) + 1, currCol.defaultValue.val.CHAR);
                             }
                             else if(currCol.type == INTEGER) {
                                 currCol.values[prevGoodJs[l]].val.INTEGER = currCol.defaultValue.val.INTEGER;
@@ -1866,7 +1869,7 @@ void deleteDuplicateValues(Column* col) {
                         else {
                             col->values[j].val.CHAR = strdup(col->defaultValue.val.CHAR);
                             if(col->autoIncrement)
-                                strcpy(col->defaultValue.val.CHAR, intToLetter(letterToInt(col->defaultValue.val.CHAR) + 1));
+                                intToLetter(letterToInt(col->defaultValue.val.CHAR) + 1, col->defaultValue.val.CHAR);
                         }
                     }
                 }
@@ -2949,8 +2952,11 @@ void printTable(Table table) {
     //Printing the column letters A, B, C, ... in the centre of their respective column
     for(int i = 0; i < table.numCols; i++) {
         printf("\e[1m%-*s\e[m", colWidth / 2, " ");
-        printf("%s", intToLetter(i + 1));
-        printf("\e[1m%-*s\e[m", (int)(colWidth / 2 - strlen(intToLetter(i)) + 1), " ");
+        char temp[MAX_LEN];
+        intToLetter(i + 1, temp);
+        printf("%s", temp);
+        intToLetter(i, temp);
+        printf("\e[1m%-*s\e[m", (int)(colWidth / 2 - strlen(temp) + 1), " ");
     }
 
     printSeparatorLine(table.numCols, 0);
@@ -3134,13 +3140,12 @@ void printColumn(Column col) {
 }
 
 /**
- * A=1
- * Z=26
- * AA=27
- * AZ=52
-*/
-char* intToLetter(int number) {
-    char* stringOfLetters = malloc(sizeof(char) * MAX_LEN);
+ * Takes an integer index and returns the equivalent column letter label.
+   1=A, 26=Z, 27=AA, 52=AZ
+ * @param number - The integer to get the corresponding letter label from. (1 indexed)
+ * @param letterLabel - the equivalent letter label of the given integer returned with pass by reference.
+**/
+void intToLetter(int number, char* letterLabel) {
 
     number--;
 
@@ -3149,25 +3154,28 @@ char* intToLetter(int number) {
     do {
         remainder = quot % 26;
         quot = quot / 26;
-        stringOfLetters[i] = 65 + remainder;
+        letterLabel[i] = 65 + remainder;
         i++;
     } while(quot > 0);
 
     if(i > 1)
-        stringOfLetters[i - 1] -= 1;
-    stringOfLetters[i] = '\0';
+        letterLabel[i - 1] -= 1;
+    letterLabel[i] = '\0';
 
-    for(int j = 0; j < strlen(stringOfLetters) / 2; j++) {
-        dummy = stringOfLetters[j];
-        stringOfLetters[j] = stringOfLetters[strlen(stringOfLetters) - j - 1];
-        stringOfLetters[strlen(stringOfLetters) - j - 1] = dummy;
+    for(int j = 0; j < strlen(letterLabel) / 2; j++) {
+        dummy = letterLabel[j];
+        letterLabel[j] = letterLabel[strlen(letterLabel) - j - 1];
+        letterLabel[strlen(letterLabel) - j - 1] = dummy;
     }
-
-    return stringOfLetters;
 }
 
+/**
+ * Takes a string of letters and returns the equivalent integer index based on column letter labels.
+   A=1, Z=26, AA=27, AZ=52
+ * @param stringOfLetters - The string of letters to have its equivalent integer index returned.
+ * @return - The integer index corresponding to the stringOfLetters parameter.
+ */
 int letterToInt(char* stringOfLetters) {
-
     char* realString = strdup(stringOfLetters);
 
     int number = 0;
@@ -3186,6 +3194,12 @@ int letterToInt(char* stringOfLetters) {
     return number;
 }
 
+/**
+ * Sorts a table's rows based on a chosen column's values. Uses bubblesort currently.
+ * @param table - The table to have its rows sorted.
+ * @param colName - The name of the column to have its values compared to determine the sorting order.
+ * @param ascending - Whether or not the rows should be sorted in ascending order (1) or descending order (0).
+**/
 void sortTableByCol(Table* table, char* colName, int ascending) {
 
     int colIndex;
@@ -3196,6 +3210,7 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
     int nullDummy;
 
     if(ascending) {
+        //Each sorting comparison is slightly different based on the given column's datatype
         if(type == INTEGER) {
             do {
                 isMixed = 0;
@@ -3399,6 +3414,13 @@ void sortTableByCol(Table* table, char* colName, int ascending) {
     }
 }
 
+/**
+ * Imports a desired table from a given file. There is special treatment for .db files. Every other extension is
+   treated as a .txt file.
+ * @param tableName - The name of the table to be inserted from the given file.
+ * @param filename - The name of the file to import the table from.
+ * @return - A pointer to the imported table.
+**/
 Table* importTable(char* tableName, char* filename) {
 
     char* properName = addQuotesToString(tableName);
@@ -3430,6 +3452,9 @@ Table* importTable(char* tableName, char* filename) {
 
             table = malloc(sizeof(Table));
             memcpy(table, (Table*)(*value), sizeof(Table));
+
+            free(*value);
+            free(value);
 
             printTable(*table);
 
@@ -3476,7 +3501,10 @@ Table* importTable(char* tableName, char* filename) {
 
             int numInserts = 0;
 
-            //LIMITATION: CREATE AND INSERT COMMANDS MUST BE ON SEPARATE LINES OF GIVEN FILE. FIX IN THE FUTURE!
+            /*
+            Loops through the file looking for SQL commands pertaining to the desired table, and puts them together to form a
+            definitive collection of sql statement for that table.
+            */
             while(fgets(line, 1000, fp)) {
                 if(!creating && strstr(line, tableCreateLine))
                     creating = 1;
@@ -3524,7 +3552,6 @@ Table* importTable(char* tableName, char* filename) {
                         insertCmds[numInserts - 1] = realloc(insertCmds[numInserts - 1], strlen(insertCmds[numInserts - 1]) + 1000);
 
                     if(strstr(line, ";")) {
-
                         char* lineCopy = strdup(line);
                         strcat(insertCmds[numInserts - 1], strtok(lineCopy, ";"));
                         strcat(insertCmds[numInserts - 1], ";\n");
@@ -3540,6 +3567,8 @@ Table* importTable(char* tableName, char* filename) {
             char* sql = malloc(1000 * numInserts + strlen(createCmd));
             strcpy(sql, createCmd);
             free(createCmd);
+            free(tableCreateLine);
+            free(rowInsertLine);
             for(int i = 0; i < numInserts; i++) {
                 strcat(sql, insertCmds[i]);
                 free(insertCmds[i]);
@@ -3552,12 +3581,15 @@ Table* importTable(char* tableName, char* filename) {
 
             truncate("load.db", 0);
 
+            //Running the found SQL commands to create a .db file to then load from.
             sqlite3_open("load.db", &db);
             sqlite3_exec(db, sql, NULL, NULL, errMessage);
             sqlite3_close(db);
+            free(*errMessage);
             free(errMessage);
             free(sql);
 
+            //Recursive call for .db file import
             table = importTable(tableName, "load.db");
 
             remove("load.db");
@@ -4928,14 +4960,16 @@ int userTableOperator(int numTables, Table** tables) {
 
                         char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
+                        char letterLabel[MAX_LEN];
+                        intToLetter(currentTable->numCols + 1, letterLabel);
 
                         if(currentTable->numCols > 0) {
-                            printf("Which column position would you like to insert into? (A-%s): ", intToLetter(currentTable->numCols + 1));
+                            printf("Which column position would you like to insert into? (A-%s): ", letterLabel);
                             do {
                                 fgetsUntil(colString, MAX_LEN);
                                 colPos = letterToInt(colString) - 1;
                                 if(colPos < 0 || colPos > currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols + 1));
+                                    printf("Please input a valid column position. (A-%s): ", letterLabel);
                             } while(colPos < 0 || colPos > currentTable->numCols);
 
                             insertIntoCol(currentTable, colName, colType, numThings, numList, valueList, attrs, defaultVal, foreignKeyName, colString);
@@ -5349,13 +5383,16 @@ int userTableOperator(int numTables, Table** tables) {
                         if(currentTable->numCols > 1) {
                             char* colString = malloc(sizeof(char) * MAX_LEN);
                             int colPos;
-                            printf("Please input the position of the column you would like to move (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
+                            char letterLabel[MAX_LEN];
+                            intToLetter(currentTable->numCols, letterLabel);
+
+                            printf("Please input the position of the column you would like to move (A-%s) ('\\x' = cancel): ", letterLabel);
                             do {
                                 fgetsUntil(colString, MAX_LEN);
                                 if(strcmp(colString, "\\x") != 0) {
                                     colPos = letterToInt(colString) - 1;
                                     if(colPos < 0 || colPos >= currentTable->numCols)
-                                        printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                        printf("Please input a valid column position. (A-%s): ", letterLabel);
                                 }
                                 else
                                     break;
@@ -5368,12 +5405,12 @@ int userTableOperator(int numTables, Table** tables) {
 
                             int newPos;
 
-                            printf("Which position would you like to insert this column into? (A-%s): ", intToLetter(currentTable->numCols));
+                            printf("Which position would you like to insert this column into? (A-%s): ", letterLabel);
                             do {
                                 fgetsUntil(colString, MAX_LEN);
                                 newPos = letterToInt(colString) - 1;
                                 if(newPos < 0 || newPos >= currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                    printf("Please input a valid column position. (A-%s): ", letterLabel);
                             } while(newPos < 0 || newPos >= currentTable->numCols);
 
                             Column dummyCol = copyColumn(currentTable->cols[colPos]);
@@ -5485,13 +5522,16 @@ int userTableOperator(int numTables, Table** tables) {
                         // "1. COPY a value in current table"
                         char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
-                        printf("Please input the column position of the value you would like to copy. (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
+                        char letterLabel[MAX_LEN];
+                        intToLetter(currentTable->numCols, letterLabel);
+
+                        printf("Please input the column position of the value you would like to copy. (A-%s) ('\\x' = cancel): ", letterLabel);
                         do {
                             fgetsUntil(colString, MAX_LEN);
                             if(strcmp(colString, "\\x") != 0) {
                                 colPos = letterToInt(colString) - 1;
                                 if(colPos < 0 || colPos >= currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                    printf("Please input a valid column position. (A-%s): ", letterLabel);
                             }
                             else
                                 break;
@@ -5582,13 +5622,16 @@ int userTableOperator(int numTables, Table** tables) {
                         // "3. COPY column in current table"
                         char* colString = malloc(sizeof(char) * MAX_LEN);
                         int colPos;
-                        printf("Please input the position of the column you would like to copy. (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols));
+                        char letterLabel[MAX_LEN];
+                        intToLetter(currentTable->numCols, letterLabel);
+
+                        printf("Please input the position of the column you would like to copy. (A-%s) ('\\x' = cancel): ", letterLabel);
                         do {
                             fgetsUntil(colString, MAX_LEN);
                             if(strcmp(colString, "\\x") != 0) {
                                 colPos = letterToInt(colString) - 1;
                                 if(colPos < 0 || colPos >= currentTable->numCols)
-                                    printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols));
+                                    printf("Please input a valid column position. (A-%s): ", letterLabel);
                             }
                             else
                                 break;
@@ -6147,13 +6190,16 @@ int userTableOperator(int numTables, Table** tables) {
                             char colString[MAX_LEN];
                             int colPos;
 
-                            printf("Which column position would you like to insert into? (A-%s) ('\\x' = cancel): ", intToLetter(currentTable->numCols + 1));
+                            char letterLabel[MAX_LEN] = "";
+                            intToLetter(currentTable->numCols + 1, letterLabel);
+
+                            printf("Which column position would you like to insert into? (A-%s) ('\\x' = cancel): ", letterLabel);
                             do {
                                 fgetsUntil(colString, MAX_LEN);
                                 if(strcmp(colString, "\\x") != 0) {
                                     colPos = letterToInt(colString) - 1;
                                     if(colPos < 0 || colPos > currentTable->numCols)
-                                        printf("Please input a valid column position. (A-%s): ", intToLetter(currentTable->numCols + 1));
+                                        printf("Please input a valid column position. (A-%s): ", letterLabel);
                                 }
                                 else
                                     break;
@@ -6534,6 +6580,7 @@ int userTableOperator(int numTables, Table** tables) {
                                 else
                                     *tables = realloc(*tables, sizeof(Table) * numTables);
                                 (*tables)[numTables - 1] = *importedTable;
+                                free(importedTable);
                                 checkDupTableNames(*tables, numTables, (*tables)[numTables - 1].name, numTables - 1);
                                 currentTable = &(*tables)[numTables - 1];
                                 currTableIndex = numTables - 1;

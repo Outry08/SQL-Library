@@ -159,7 +159,7 @@ void printSeparatorLine(int numCols, int rowNum); //Implemented
 void printRow(Table table, int rowIndex); //Implemented
 void printLoneRow(LoneValue* row, int numValues); //Implemented
 void printColumn(Column col); //Implemented
-char* intToLetter(int number); //Implemented
+void intToLetter(int number, char* letterLabel); //Implemented
 int letterToInt(char* stringOfLetters); //Implemented
 
 void initColAttrs(Column* col); //Implemented
