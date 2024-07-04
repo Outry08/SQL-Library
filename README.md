@@ -14,11 +14,7 @@ Execute the program with ./cql
 ## Visuals
 
 ## Roadmap
-- Valgrind and fix all leaks.
-- Add error return numbers to all functions.
-- Add full library documentation.
-    - Up next: userTableOperator
-
+- Valgrind and fix most leaks.
 - COMPLETE.
 
 ## Potential Additions At A Later Date
