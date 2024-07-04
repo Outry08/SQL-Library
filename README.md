@@ -37,6 +37,7 @@ Execute the program with ./cql
 - Undo feature.
 - Extra CHAR comparisons (Contains, starts with, ends with).
 - Saving and loading select and where statements for quick repeated usage.
+- Add question on a selected table to ask if updates want to be applied to the base table.
 
 ## Limitations
 - Upon importing SQL instructions, they cannot be all on one line.

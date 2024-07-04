@@ -4363,11 +4363,17 @@ void shrinkSpaces(char** string) {
     *string = newString;
 }
 
+/**
+ * An all-emcompassing, user-input-driven menu to create, manipulate, delete, import, and export tables and databases.
+ * @param numTables - The number of tables being in the database being passed in.
+ * @param tables - A pointer to a database. Will be updated and returned through call-by-reference with the user's changes.
+ * @return - The new number of tables in the database being passed back to the calling function.
+**/
 int userTableOperator(int numTables, Table** tables) {
 
     Table* currentTable = NULL;
 
-    int* menuChoices;
+    int* menuChoices = NULL;
     int currTableIndex = -1;;
 
     char tableName[MAX_LEN];
@@ -4398,10 +4404,10 @@ int userTableOperator(int numTables, Table** tables) {
 
     printf("\t\t-- Welcome to CQL! --\n");
 
-    //ADD QUESTION FOR SELECTED TABLE IF THE USER WANTS TO APPLY THE CHANGES TO THE BASE TABLE!
     do {
         numWheres = 0;
-
+        if(menuChoices)
+            free(menuChoices);
         menuChoices = actionMenu(currentTable);
 
         switch(menuChoices[0]) {
@@ -6879,12 +6885,6 @@ int userTableOperator(int numTables, Table** tables) {
                 }
                 break;
 
-                /*
-                perhaps incorporate a where or select saving system, allowing the user to swiftly use frequently used where or select statements.
-                I would save these in a separate.cql file separate from the.sql file that can be converted to.db.
-                I could add other useful CQL specific saves later on.
-                    */
-
             case 0:
                 //"0. EXIT"
                 switch(menuChoices[1]) {
@@ -6951,40 +6951,20 @@ int userTableOperator(int numTables, Table** tables) {
                         break;
                 }
                 break;
-
         }
 
     } while(menuChoices[0] > 0);
 
-    if(menuChoices)
-        free(menuChoices);
-
-
-    // char** nameList = NULL;
-    // int* typeList = NULL;
-    // void** valueList = NULL;
-    // char** attrList = NULL;
-    // void** defaultValList = NULL;
-    // char** foreignKeyList = NULL;
-
-    // Where* whereList = NULL;
-    // int numWheres = 0;
-    // char* connectiveList = NULL;
-    // int* numList;
-
-    // Select sel;
-
-    // void* valCopy = NULL;
-    // int valCopyType = -1;
-    // LoneValue* rowCopy = NULL;
-    // int rowCopyLength;
-    // colCopy.name = NULL;
-
+    free(menuChoices);
 
     return numTables;
-
 }
 
+/**
+ * A user-input menu for the manipulation options the user has to choose from in the userTableOperator function.
+ * @param table - A pointer to the table that these actions will be applied to.
+ * @return - An array of the primary and secondary menu choices that the user makes. Must be freed.
+**/
 int* actionMenu(Table* table) {
 
     int* menuChoices = malloc(sizeof(int) * 2);
@@ -7138,6 +7118,14 @@ int* actionMenu(Table* table) {
 
     return menuChoices;
 }
+
+/**
+ * A user-input menu for the choice of table in a table database.
+ * @param numTables - The number of tables in the table database.
+ * @param tableList - The table database array.
+ * @return - The index of the table that the user chose.
+ * @return - -1 if the user chose to cancel the current action.
+**/
 int tableMenu(int numTables, Table* tableList) {
 
     int tableChoice;
@@ -7155,20 +7143,23 @@ int tableMenu(int numTables, Table* tableList) {
 
     return tableChoice;
 }
+
+/**
+ * A user-input function to fill the fields of WHERE statement(s)
+ * @param currentTable - The table that the WHERE statement(s) will pertain to.
+ * @param whereList - A pointer to an array of WHERE statements that will ba updated in this function and returned with
+   call-by-reference.
+ * @param connectiveList - A pointer to an array of connective characters that will be updated in this function and returned
+   with call-by-reference.
+   @return - The number of WHERE statement(s) that the user has filled out.
+**/
 int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
 
     char yesno[MAX_LEN];
     int numWheres = 0;
-    // int numSpaces = 0;
-    // char* token;
-    // char* token2;
-    // static int intVal;
-    // static double doubVal;
-    // char* stringVal;
 
     do {
         numWheres++;
-        // numSpaces = 0;
         if(numWheres == 1) {
             *whereList = malloc(sizeof(Where));
             *connectiveList = malloc(sizeof(char));
@@ -7261,6 +7252,10 @@ int whereInput(Table* currentTable, Where** whereList, char** connectiveList) {
     return numWheres;
 }
 
+/**
+ * A user-input menu for the choice of datatypes most likely used for column creation.
+ * @return - The datatype that the user chose.
+**/
 int typeInput(void) {
 
     int choice;
@@ -7283,6 +7278,12 @@ int typeInput(void) {
 
 }
 
+/**
+ * A user-input for the range of column labels to be included in the current action. I.e. 'A-C', 'A, D, E', or 'A-D, G-I'
+ * @param colNums - A pointer to an array of column indecies to be filled and returned with call-by-reference.
+ * @param numCols - The total number of columns the user has to choose from.
+ * @return - The number of columns the user has chosen.
+**/
 int colPosInput(int** colNums, int numCols) {
 
     int tempPos, colPosI, colPosF, numColsChosen = 0;
@@ -7304,8 +7305,11 @@ int colPosInput(int** colNums, int numCols) {
             return -1;
         }
 
+        //Handling each group of inputted labels by each comma separator
         token = strtok(input, ", \n");
         while(token != NULL) {
+
+            //Retrieving the left and right letters of the dash to determine the range of columns
             temp = strstr(token, "-");
             if(temp != NULL) {
 
@@ -7349,6 +7353,12 @@ int colPosInput(int** colNums, int numCols) {
     return numColsChosen;
 }
 
+/**
+ * A user-input for the range of row numbers to be included in the current action. I.e. '1-3', '1, 4, 5', or '1-4, 7-9'
+ * @param rowNums - A pointer to an array of row indecies to be filled and returned with call-by-reference.
+ * @param numRows - The total number of rows the user has to choose from.
+ * @return - The number of rows the user has chosen.
+**/
 int rowNumInput(int** rowNums, int numRows) {
 
     int tempNum, rowNumI, rowNumF, numRowsChosen = 0;
@@ -7370,8 +7380,10 @@ int rowNumInput(int** rowNums, int numRows) {
             return -1;
         }
 
+        //Handling each group of inputted numbers by each comma separator
         token = strtok(input, ", \n");
         while(token != NULL) {
+            //Retrieving the left and right letters of the dash to determine the range of columns
             temp = strstr(token, "-");
             if(temp != NULL) {
 
@@ -7389,7 +7401,6 @@ int rowNumInput(int** rowNums, int numRows) {
                     *rowNums = realloc(*rowNums, sizeof(int) * (numRowsChosen + rowNumF - rowNumI));
                 for(int i = rowNumI - 1; i < rowNumF; i++)
                     (*rowNums)[numRowsChosen++] = i;
-
             }
             else {
                 tempNum = atoi(token) - 1;
@@ -7415,6 +7426,11 @@ int rowNumInput(int** rowNums, int numRows) {
     return numRowsChosen;
 }
 
+/**
+ * A user-input menu used to toggle an existing column's attributes as well as edit their datatye, default value, and
+   foreign key name.
+ * @param col - A pointer to the column to have its attributes edited.
+**/
 void attrInputByCol(Column* col) {
     int input;
     void* defaultVal = NULL;
@@ -7425,30 +7441,39 @@ void attrInputByCol(Column* col) {
         printf("1. Column Type (Currently: ");
         printType(col->type);
         printf(")\n");
+
         printf("2. Auto Increment");
         if(col->autoIncrement)
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("3. Not NULL");
         if(col->notNull)
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("4. Primary Key");
         if(col->isPrimaryKey)
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("5. Foreign Key");
         if(col->hasForeignKey)
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("6. Default Value (Currently '");
         if(col->defaultValue.isNULL)
             printf("NULL");
@@ -7463,9 +7488,11 @@ void attrInputByCol(Column* col) {
         else if(col->type == DATE)
             printf("DATE datatype support not yet implemented.");
         printf("')\n");
+
         printf("7. Foreign Key Name (Currently '");
         printValue(col->fKeyName, CHAR);
         printf("')\n");
+
         printf("0. Done\n"
             "Choice: ");
         do {
@@ -7474,9 +7501,8 @@ void attrInputByCol(Column* col) {
                 printf("Please input a number between 0 & 7: ");
         } while(input < 0 || input > 7);
 
-        if(input == 1) {
+        if(input == 1)
             changeColType(col, typeInput());
-        }
 
         else if(input == 2) {
             if(!(col->type == INTEGER || col->type == DECIMAL || col->type == CHAR)) {
@@ -7494,9 +7520,7 @@ void attrInputByCol(Column* col) {
         }
 
         else if(input == 3) {
-
             if(!col->notNull) {
-
                 printf("Not Null attribute added.\n");
 
                 if(col->defaultValue.isNULL) {
@@ -7535,16 +7559,17 @@ void attrInputByCol(Column* col) {
                         else
                             sscanf("0", "%d", (int*)defaultVal);
                     }
-                    else if(col->type == DATE) {
+                    else if(col->type == DATE)
                         printf("DATE datatype functionality coming soon.\n");
-                    }
 
                 }
-                else {
+                else
                     defaultVal = NULL;
-                }
 
                 assignColAttrs(col, "N", defaultVal, NULL);
+
+                if(defaultVal)
+                    free(defaultVal);
 
             }
             else {
@@ -7578,11 +7603,9 @@ void attrInputByCol(Column* col) {
                     } while(!strchr(foreignKeyName, '.'));
                     foreignKeyName = realloc(foreignKeyName, sizeof(char) * (strlen(foreignKeyName) + 1));
                 }
-
                 assignColAttrs(col, "F", NULL, foreignKeyName);
 
                 free(foreignKeyName);
-
             }
             else {
                 col->hasForeignKey = 0;
@@ -7594,7 +7617,6 @@ void attrInputByCol(Column* col) {
 
         }
         else if(input == 6) {
-
             printf("Please input a default value (of type ");
             printType(col->type);
             printf("): ");
@@ -7629,12 +7651,10 @@ void attrInputByCol(Column* col) {
                 else
                     sscanf("0", "%d", &col->defaultValue.val.BOOL);
             }
-            else if(col->type == DATE) {
+            else if(col->type == DATE)
                 printf("DATE datatype functionality coming soon.\n");
-            }
-
         }
-        if(input == 7) {
+        else if(input == 7) {
             if(!col->fKeyName)
                 free(col->fKeyName);
             printf("Please input the name of the column you would like to be the foreign key (of the form 'TableName.ColumnName'): ");
@@ -7650,11 +7670,16 @@ void attrInputByCol(Column* col) {
 
     } while(input > 0);
 
-    if(defaultVal != NULL)
-        free(defaultVal);
-
 }
 
+/**
+ * A user-input menu used to assign attributes for a soon-to-be column as well as enter the default value and
+   foreign key name. This function is most useful during the table or column creation processes.
+ * @param colType - The type of the soon-to-be column.
+ * @param defaultVal - A pointer to an abstract default value. Will be updated and returned with call-by-reference.
+ * @param foreignKeyName - A pointer to the foreignKeyName string. Will be updated and returned with call-by-reference.
+ * @return - The string of letters indicating which attributes will be active. Eg. "APN" = Autoincrement, Primary Key, and Not Null.
+**/
 char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
     int input;
 
@@ -7672,31 +7697,41 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("2. Not NULL");
         if(strchr(attrList, 'N'))
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("3. Primary Key");
         if(strchr(attrList, 'P'))
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("4. Foreign Key");
         if(strchr(attrList, 'F'))
             printf(" (ACTIVE)");
         else
             printf(" (INACTIVE)");
+
         printf("\n");
+
         printf("5. Default Value (Currently '");
         printValue(*defaultVal, colType);
         printf("')\n");
+
         printf("6. Foreign Key Name (Currently '");
         printValue(*foreignKeyName, CHAR);
         printf("')\n");
+
         printf("0. Done\n"
             "Choice: ");
         do {
@@ -7721,9 +7756,7 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
                         attrList[i] = '0';
             }
         }
-
         else if(input == 2) {
-
             if(!defaultVal) {
                 printf("Error: No default value pointer given.\n");
                 continue;
@@ -7777,7 +7810,6 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
             }
         }
         if(input == 5) {
-
             if(!defaultVal) {
                 printf("Error: No default value pointer given.\n");
                 continue;
@@ -7817,9 +7849,8 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
                 else
                     sscanf("0", "%d", (int*)*defaultVal);
             }
-            else if(colType == DATE) {
+            else if(colType == DATE)
                 printf("DATE datatype functionality coming soon.\n");
-            }
         }
         if(input == 6) {
             if(!foreignKeyName) {
@@ -7842,9 +7873,15 @@ char* attrInputByType(int colType, void** defaultVal, char** foreignKeyName) {
     } while(input > 0);
 
     return attrList;
-
 }
 
+/**
+ * Takes an existing column and assigns it a new datatype (If the type conversion is valid).
+ * @param col - A pointer to the column that will have its type changed.
+ * @param newType - The new datatype to assign to the given column.
+ * @return - 1 Upon a successful datatype change.
+ * @return - 0 Upon failure to change the datatype.
+**/
 int changeColType(Column* col, int newType) {
     if(newType == CHAR) {
         if(col->type == DECIMAL) {
@@ -8060,6 +8097,10 @@ int changeColType(Column* col, int newType) {
     return 0;
 }
 
+/**
+ * Prints the datatype provided as a string.
+ * @param type - The datatype to be printed.
+**/
 void printType(int type) {
     if(type == CHAR)
         printf("CHAR");
@@ -8075,29 +8116,35 @@ void printType(int type) {
         printf("UNKOWN TYPE");
 }
 
+/**
+ * A convinience function to print an abstract value that pertains to the provided datatype.
+ * @param value - The abstract value to be printed.
+ * @param type - The datatype to print the value as.
+**/
 void printValue(void* value, int type) {
     if(value == NULL)
         printf("NULL");
-    else if(type == INTEGER) {
+    else if(type == INTEGER)
         printf("%d", *((int*)value));
-    }
-    else if(type == DECIMAL) {
+    else if(type == DECIMAL)
         printf("%lf", *((double*)value));
-    }
-    else if(type == CHAR) {
+    else if(type == CHAR)
         printf("%s", (char*)value);
-    }
     else if(type == BOOL) {
         if(*((int*)value) == 1)
             printf("TRUE");
         else
             printf("FALSE");
     }
-    else if(type == DATE) {
+    else if(type == DATE)
         printf("DATE datatype yet to be implemented.");
-    }
 }
 
+/**
+ * Returns a string version of the provided datatype.
+ * @param type - The type to have its string version retrieved.
+ * @return - The string version of the provided datatype. (Static string - No free needed).
+**/
 char* typeToString(int type) {
     if(type == CHAR)
         return "CHAR";
@@ -8115,12 +8162,23 @@ char* typeToString(int type) {
         return "UNKOWN TYPE";
 }
 
+/**
+ * Takes a string and returns an integer datatype pertaining to the provided string. Most SQL datatypes are consolidated into
+   the 5 CQL datatypes.
+ * @param type - The string representation of a datatype.
+ * @return - The integer representation of the provided datatype.
+ * @return - -1 for a NULL or "NULL" parameter.
+ * @return - -2 Upon failure to find a matching datatype.
+**/
 int stringToType(char* type) {
     char* charTypes = "CHARACTER VARCHAR VARYING CHARACTER NCHAR NATIVE CHARACTER NVARCHAR TEXT CLOB";
     char* intTypes = "INT INTEGER TINYINT SMALLINT MEDIUMINT BIGINT UNSIGNED BIG INT INT2 INT8";
     char* decimalTypes = "REAL DOUBLE DOUBLE PRECISION FLOAT NUMERIC DECIMAL";
     char* boolTypes = "BOOLEAN BOOL BIT";
     char* dateTypes = "DATE DATETIME";
+
+    if(!type)
+        return -1;
 
     for(int i = 0; i < strlen(type); i++)
         type[i] = toupper(type[i]);
@@ -8141,11 +8199,23 @@ int stringToType(char* type) {
         return -2;
 }
 
+/**
+ * A simple user input to ensure thay are prepared to delete a set of data.
+ * @return - If the user said that they are ready to delete.
+**/
 int verifyDelete(void) {
     printf("Are you sure you wish do delete this data? (yes/no): ");
     return isYes(yesnoInput());
 }
 
+/**
+ * Looks into the database to ensure there are no duplicate table names. Adds a number to the end of any duplicate names.
+ * @param tables - The database to search through.
+ * @param numTables - The number of tables in the provided database.
+ * @param nameToCheck - The name to search through the database for duplicates of.
+ * @param newNameIndex - The index of the table that just had its name updated, meaning the index of the table that needs
+   to have its name changed if a duplicate is found.
+**/
 void checkDupTableNames(Table* tables, int numTables, char* nameToCheck, int newNameIndex) {
     int numDupes = 0;
     char* nameSuffix;
@@ -8159,14 +8229,20 @@ void checkDupTableNames(Table* tables, int numTables, char* nameToCheck, int new
                 numDupes++;
                 sprintf(nameSuffix, "(%d)", numDupes);
             }
-            else {
+            else
                 strcat(nameToCheck, " (1)");
-            }
             i = 0;
         }
     }
 }
 
+/**
+ * Looks into the table's columns to ensure there are no duplicate column names. Adds a number to the end of any duplicate names.
+ * @param table - The table to have its columns searched through.
+ * @param nameToCheck - The name to search through the columns for duplicates of.
+ * @param newNameIndex - The index of the column that just had its name updated, meaning the index of the column that needs
+   to have its name changed if a duplicate is found.
+**/
 void checkDupColumnNames(Table table, char* nameToCheck, int newNameIndex) {
     int numDupes = 0;
     char* nameSuffix;
@@ -8180,14 +8256,19 @@ void checkDupColumnNames(Table table, char* nameToCheck, int newNameIndex) {
                 numDupes++;
                 sprintf(nameSuffix, "(%d)", numDupes);
             }
-            else {
+            else
                 strcat(nameToCheck, " (1)");
-            }
             i = 0;
         }
     }
 }
 
+/**
+ * Evaluates a given name to see if it contains any prohibited characters/substrings.
+ * @param name - The name to be evaluated.
+ * @return - 1 if the name is clear of any prohibited characters/substrings.
+ * @return - 0 if the name does contain prohibited characters/substrings.
+**/
 int checkInvalidName(char* name) {
     int numBadStrings = 8;
 
@@ -8212,41 +8293,57 @@ int checkInvalidName(char* name) {
     return 1;
 }
 
+/**
+ * A string comparator function that checks if two strings are equal if their capitalizations are ignored.
+ * @param string1, string2 - The two strings that are being compared.
+ * @return - Whether or not the two strings are equal ignoring their capitalization.
+**/
 int equalsIgnoreCase(char* string1, char* string2) {
+    if(!string1 || !string2)
+        return 0;
+
     char temp1[MAX_LEN];
     char temp2[MAX_LEN];
 
     strcpy(temp1, string1);
     strcpy(temp2, string2);
 
-    for(int i = 0; i < strlen(temp1); i++) {
+    for(int i = 0; i < strlen(temp1); i++)
         temp1[i] = tolower(temp1[i]);
-    }
-    for(int i = 0; i < strlen(temp2); i++) {
+    for(int i = 0; i < strlen(temp2); i++)
         temp2[i] = tolower(temp2[i]);
-    }
 
     return strcmp(temp1, temp2) == 0;
-
 }
 
+/**
+ * A string comparator function that checks if a string contains a given substring if capitalization is ignored.
+ * @param big - The string that is being searched for a substring.
+ * @param small - The substring being searched for in the other string parameter.
+ * @return - Whether or not the first string contains the second string ignoring their capitalization.
+**/
 int containsIgnoreCase(char* big, char* small) {
+    if(!big || !small)
+        return 0;
+
     char tempBig[MAX_LEN];
     char tempSmall[MAX_LEN];
 
     strcpy(tempBig, big);
     strcpy(tempSmall, small);
 
-    for(int i = 0; i < strlen(tempBig); i++) {
+    for(int i = 0; i < strlen(tempBig); i++)
         tempBig[i] = tolower(tempBig[i]);
-    }
-    for(int i = 0; i < strlen(tempSmall); i++) {
+    for(int i = 0; i < strlen(tempSmall); i++)
         tempSmall[i] = tolower(tempSmall[i]);
-    }
 
     return strstr(tempBig, tempSmall) != NULL;
 }
 
+/**
+ * A user-input function for a yes or no question.
+ * @return - What the user inputted ('yes' or 'no').
+**/
 char* yesnoInput(void) {
     static char yesno[MAX_LEN];
 
@@ -8259,6 +8356,12 @@ char* yesnoInput(void) {
     return yesno;
 }
 
+/**
+ * Checks if the given string insinuates a yes response.
+ * @param yesno - The string that is being checked for if it means yes.
+ * @return - 1 if yes.
+ * @return - 0 if no.
+**/
 int isYes(char* yesno) {
     for(int i = 0; i < strlen(yesno); i++)
         yesno[i] = tolower(yesno[i]);
@@ -8269,6 +8372,12 @@ int isYes(char* yesno) {
     return 0;
 }
 
+/**
+ * Checks if the given string insinuates a no response.
+ * @param yesno - The string that is being checked for if it means no.
+ * @return - 1 if no.
+ * @return - 0 if yes.
+**/
 int isNo(char* yesno) {
     for(int i = 0; i < strlen(yesno); i++)
         yesno[i] = tolower(yesno[i]);
@@ -8279,6 +8388,13 @@ int isNo(char* yesno) {
     return 0;
 }
 
+/**
+ * A convinience function that calls fgets as many times as needed to flush any isolated '\n's still in the user input pipeline.
+   It also automatically removes the '\n' at the end of the user's input. At face-value, this can be used in just the same
+   way as regular fgets
+ * @param string - The string to be filled by the fgets function calls.
+ * @param size - The maximum input size allowed for the string input.
+**/
 void fgetsUntil(char* string, int size) {
     do {
         fgets(string, size, stdin);
@@ -8286,6 +8402,11 @@ void fgetsUntil(char* string, int size) {
     string[strlen(string) - 1] = '\0';
 }
 
+/**
+ * A convinience function that calls scanf as many times as needed in the case that the user input does not match the intended datatype.
+ * @param formSpec - The format specifier string that is the same as regular scanf.
+ * @param val - The value being filled by the user input and scanf calls.
+**/
 void scanfWell(char* formSpec, void* val) {
     char buffer[MAX_LEN];
     int success;
@@ -8298,6 +8419,13 @@ void scanfWell(char* formSpec, void* val) {
     } while(!success);
 }
 
+/**
+ * A convinience function that calls scanf as many times as needed in the case that the user input does not match the intended
+   datatype. It allows one special case where the user inputs "NULL". This is allowed for any datatype, as the user should be
+   allowed to initialize an integer value as NULL for example.
+ * @param formSpec - The format specifier string that is the same as regular scanf.
+ * @param val - The value being filled by the user input and scanf calls.
+**/
 void scanfWellNull(char* formSpec, void* val) {
     char buffer[MAX_LEN];
     int success;
@@ -8315,6 +8443,10 @@ void scanfWellNull(char* formSpec, void* val) {
     } while(!success);
 }
 
+/**
+ * Used to pause the program for a provided number of milliseconds. Best used for console output timing.
+ * @param milliseconds - The number of millseconds for the program to pause for.
+**/
 void cql_sleep(int milliseconds) {
     struct timespec ts;
 
