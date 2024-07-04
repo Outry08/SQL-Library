@@ -155,9 +155,7 @@ int main(int argc, char const* argv[]) {
     where1.comparison = strdup("!=");
     wheres = whereList(7, where5, where3, where6, where4, where1, where7, where8);
     conns = connectiveList(6, '|', '&', '|', '|', '&', '&');
-    printf("YEETEY\n");
     delete(&tables[0], 7, wheres, conns);
-    printf("HEHE\n");
     free(wheres);
     free(conns);
 
@@ -179,7 +177,7 @@ int main(int argc, char const* argv[]) {
 
     names = nameList(2, "Decimal Col", "Char Col");
     Select select1 = newSelect(2, names, 0);
-    freeList((void**)names, 1);
+    freeList((void**)names, 2);
 
     wheres = whereList(2, where5, where3);
     conns = connectiveList(1, '|');
@@ -1415,10 +1413,11 @@ void delete(Table* table, int numWheres, Where* wheres, char* conns) {
                 }
 
                 table->numRows--;
-                if(table->cols[table->numRows].type == CHAR)
-                    for(int l = 0; l < table->numRows + 1; l++)
-                        if(!table->cols[table->numRows].values[l].isNULL && table->cols[table->numRows].values[l].val.CHAR)
-                            free(table->cols[table->numRows].values[l].val.CHAR);
+
+                for(int l = 0; l < table->numCols; l++)
+                    if(table->cols[l].type == CHAR)
+                        if(!table->cols[l].values[table->numRows].isNULL && table->cols[l].values[table->numRows].val.CHAR)
+                            free(table->cols[l].values[table->numRows].val.CHAR);
 
                 for(int l = k + 1; l < numPrevGoodJs; l++)
                     if(prevGoodJs[l] > prevGoodJs[k])
@@ -3599,6 +3598,13 @@ Table* importTable(char* tableName, char* filename) {
     return table;
 }
 
+/**
+ * Imports an entire database from a given file. There is special treatment for .db files. Every other extension is
+   treated as a .txt file.
+ * @param filename - The name of the file to import the database from.
+ * @param tables - The array of tables to be filled with those from the database.
+ * @return - The number of tables imported in the database.
+**/
 int importDatabase(char* filename, Table** tables) {
 
     int numTables = 0;
@@ -3621,6 +3627,7 @@ int importDatabase(char* filename, Table** tables) {
 
         struct TableNames* names = malloc(sizeof(struct TableNames));
 
+        //Getting the names of all the tables in the database file
         sqlite3_exec(db, sql, callbackGetTableNames, names, errMessage);
         sqlite3_close(db);
 
@@ -3631,6 +3638,7 @@ int importDatabase(char* filename, Table** tables) {
             if(tables == NULL)
                 tables = malloc(sizeof(Table*));
 
+            //Importing each table individually
             for(int i = 0; i < numTables; i++) {
                 if(!strstr(names->names[i], "sqlite_")) {
                     if(i == 0)
@@ -3643,9 +3651,8 @@ int importDatabase(char* filename, Table** tables) {
                     numTables--;
             }
         }
-        else {
+        else
             fprintf(stderr, "Error: No tables found in file '%s'. Import failed.\n", filename);
-        }
 
         free(*errMessage);
         free(errMessage);
@@ -3662,6 +3669,7 @@ int importDatabase(char* filename, Table** tables) {
             int numLines = 0;
             strcpy(sql, "");
 
+            //Exctracting the SQL instrustions from the file to be executed by sqlite3 to create a .db file to then be imported from
             while(fgets(line, 1000, fp)) {
                 numLines++;
                 if(numLines > 10)
@@ -3684,7 +3692,6 @@ int importDatabase(char* filename, Table** tables) {
             numTables = importDatabase("load.db", tables);
 
             remove("load.db");
-
         }
         fclose(fp);
     }
@@ -3692,33 +3699,38 @@ int importDatabase(char* filename, Table** tables) {
     return numTables;
 }
 
+/**
+ * Exports a table in the form of SQL instructions into the given file. If a .db file is provided, the table will be saved
+   as an actual .db table.
+ * @param table - The table to be exported to a file.
+ * @param filename - The name of the file to save the table into. Can be of any extension.
+ * @param trunc - A boolean integer for whether or not you want to truncate (delete all of) the contents in the given file,
+   or add the table onto the existing contents in it. If the table being saved sheres the name of a table in the file, that
+   table will be overwritten with the new table being exported.
+**/
 void exportTable(Table table, char* filename, int trunc) {
 
     char* tableName = addQuotesToString(table.name);
-
+    //An estimated allocation to save time on reallocations
     char* sql = malloc(16 + strlen(tableName) + (MAX_LEN + 15) * table.numCols);
+
     strcpy(sql, "CREATE TABLE ");
     strcat(sql, tableName);
     strcat(sql, "(");
 
     char* colName;
+
+    //Crafting the CREATE TABLE sql statement by looking at all the columns
     for(int i = 0; i < table.numCols; i++) {
 
-        // sql = realloc(sql, strlen(sql) + MAX_LEN + 15);
-
         colName = addQuotesToString(table.cols[i].name);
-        // sql = realloc(sql, strlen(sql) + strlen(colName) + 2);
         strcat(sql, colName);
         strcat(sql, " ");
 
-        if(table.cols[i].type != BOOL) {
-            // sql = realloc(sql, strlen(sql) + strlen(typeToString(table.cols[i].type)) + 1);
+        if(table.cols[i].type != BOOL)
             strcat(sql, typeToString(table.cols[i].type));
-        }
-        else {
-            // sql = realloc(sql, strlen(sql) + strlen("BIT") + 1);
+        else
             strcat(sql, "BIT");
-        }
 
         if(table.cols[i].autoIncrement)
             strcat(sql, " AUTO_INCREMENT");
@@ -3744,9 +3756,8 @@ void exportTable(Table table, char* filename, int trunc) {
                 sprintf(boolString, "%d", table.cols[i].defaultValue.val.BOOL);
                 strcat(sql, boolString);
             }
-            else if(table.cols[i].type == DATE) {
+            else if(table.cols[i].type == DATE)
                 printf("DATE datatype functionality coming soon.\n");
-            }
         }
         if(table.cols[i].isPrimaryKey)
             strcat(sql, " PRIMARY KEY");
@@ -3755,28 +3766,32 @@ void exportTable(Table table, char* filename, int trunc) {
             char tableName[MAX_LEN];
             strcpy(tableName, table.cols[i].fKeyName);
             *strchr(tableName, '.') = '\0';
-            strcpy(tableName, addQuotesToString(tableName));
+
+            char* quoteName = addQuotesToString(tableName);
+            strcpy(tableName, quoteName);
+            free(quoteName);
             strcat(sql, tableName);
             strcat(sql, "(");
-            strcat(sql, addQuotesToString(strchr(table.cols[i].fKeyName, '.') + 1));
+
+            quoteName = addQuotesToString(strchr(table.cols[i].fKeyName, '.') + 1);
+            strcat(sql, quoteName);
             strcat(sql, ")");
+            free(quoteName);
         }
         if(table.cols[i].notNull)
             strcat(sql, " NOT NULL");
 
-        if(i < table.numCols - 1) {
-            // sql = realloc(sql, strlen(sql) + 3);
+        if(i < table.numCols - 1)
             strcat(sql, ", ");
-        }
 
         free(colName);
     }
 
-    // sql = realloc(sql, strlen(sql) + 4);
     strcat(sql, ");\n");
 
     char** insertSQL = malloc(sizeof(char*) * table.numRows);
 
+    //Crafting the insertion sql commands based on all the rows of the table
     for(int i = 0; i < table.numRows; i++) {
 
         insertSQL[i] = malloc(table.numCols * MAX_LEN * 2 + MAX_LEN);
@@ -3837,6 +3852,7 @@ void exportTable(Table table, char* filename, int trunc) {
     if(trunc)
         truncate(filename, 0);
 
+    //Executing the generated sql instructions into the given .db file
     if(endsWith(filename, ".db")) {
         sqlite3* db;
         char** errMessage = malloc(sizeof(char*));
@@ -3854,6 +3870,7 @@ void exportTable(Table table, char* filename, int trunc) {
         free(*errMessage);
         free(errMessage);
     }
+    //Adding the lines of sql commands to the given .txt file
     else {
         FILE* fp = fopen(filename, "r");
         if(fp) {
@@ -3866,9 +3883,8 @@ void exportTable(Table table, char* filename, int trunc) {
             char** lines;
             int numLines = 0;
 
-            //This is very inefficient. Make it better.
-
             char line[1000];
+            //Checking if the table is already saved in the given file, meaining only the new changes need to be added to it.
             while(fgets(line, 1000, fp)) {
                 if(!tableExists && strstr(line, tableCreateLine)) {
                     tableExists = 1;
@@ -3891,10 +3907,8 @@ void exportTable(Table table, char* filename, int trunc) {
 
             sql = realloc(sql, strlen(sql) + 1000 * numLines);
 
-            for(int i = 0; i < numLines; i++) {
+            for(int i = 0; i < numLines; i++)
                 strcat(sql, lines[i]);
-            }
-
         }
         fclose(fp);
         fp = fopen(filename, "w");
@@ -3903,15 +3917,50 @@ void exportTable(Table table, char* filename, int trunc) {
     }
 
     free(tableName);
-
     free(sql);
 }
 
+/**
+ * Exports a database in the form of SQL instructions into the given file. If a .db file is provided, the database will be saved
+   as an actual .db table.
+ * @param tables - The database to be exported to a file.
+ * @param numTables - The number of tables in the database.
+ * @param filename - The name of the file to save the database into. Can be of any extension.
+ * @param trunc - A boolean integer for whether or not you want to truncate (delete all of) the contents in the given file,
+   or add the database onto the existing contents in it. If any table from the database being saved sheres the name of a table in the file, that
+   table will be overwritten with the new table being exported.
+**/
+void exportDatabase(Table* tables, int numTables, char* filename, int trunc) {
+    if(trunc)
+        truncate(filename, 0);
+
+    for(int i = 0; i < numTables; i++)
+        exportTable(tables[i], filename, 0);
+}
+
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to check if the desired table exists. Parameter 1 gets updated if the table exists.
+ * @param value - The value that gets returned by reference back to the calling function. This is the idnicator if the table exists or not.
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackCheckExists(void* value, int numCols, char** values, char** columnNames) {
     *((int*)value) = numCols;
     return 0;
 }
 
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to print the current table's columns and values. Parameter 1 does not get used.
+ * @param value - The value that can be returned by reference back to the calling function. This is not utilized in this function.
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackPrintData(void* value, int numCols, char** values, char** columnNames) {
     for(int i = 0; i < numCols; i++) {
         printf("%s: %s\n", columnNames[i], values[i]);
@@ -3919,17 +3968,39 @@ int callbackPrintData(void* value, int numCols, char** values, char** columnName
     return 0;
 }
 
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to create a basic version of the sql table into C. Parameter 1 gets updated to take the new table back with it.
+   The table will not yet have its rows. Every column is given a default datatype of CHAR.
+ * @param value - The value that can be returned by reference back to the calling function. First, pass it in as the name of
+   the table. It will then be updated and returned as a pointer to the new table struct.
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackCreateTable(void* value, int numCols, char** values, char** colNames) {
     char* tableName = strdup(*(void**)value);
     int* colTypes = malloc(sizeof(int) * numCols);
-    for(int i = 0; i < numCols;i++)
+    for(int i = 0; i < numCols; i++)
         colTypes[i] = CHAR;
     Table* table = malloc(sizeof(Table));
     *table = create(tableName, numCols, colNames, colTypes, NULL, NULL, NULL);
     *((void**)value) = table;
-    return 1;
+    return 0;
 }
 
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to insert the rows of the sql table into the created table in C. Parameter 1 must be passed in as a pointer to
+   the table struct in C.
+ * @param value - The value that can be returned by reference back to the calling function. Must be passed in as a pointer to
+   the table struct in C.
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackInsertData(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
 
@@ -3963,6 +4034,20 @@ int callbackInsertData(void* value, int numCols, char** values, char** colNames)
     return 0;
 }
 
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to get the names of all the tables in the database.
+ * @param value - The value that can be returned by reference back to the calling function. Must be passed in as a pointer to
+   a struct of the following form in order to take the table names back to the calling function:
+   struct TableNames {
+        char** names;
+        int numNames;
+    };
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackGetTableNames(void* value, int numCols, char** values, char** colNames) {
     struct TableNames {
         char** names;
@@ -3981,25 +4066,35 @@ int callbackGetTableNames(void* value, int numCols, char** values, char** colNam
     return 0;
 }
 
+/**
+ * A callback function for the execution of sql instructions that is called once per row in the sql table.
+   Used to determine the attributes of the table's columns. I.e. their datatypes, autoincrement, primary keys, etc.
+ * @param value - The value that can be returned by reference back to the calling function. Must be passed in as a pointer to
+   the table struct in C.
+ * @param numCols - The number of columns in the current table.
+ * @param values - The cell values of the current row of the current table.
+ * @param columnNames - The names of the columns of the table.
+ * @return - 0 to indicate success.
+**/
 int callbackGetAttributes(void* value, int numCols, char** values, char** colNames) {
     Table* table = ((Table*)value);
     char* currCol = malloc(sizeof(char) * (strlen(values[0]) + MAX_LEN));
 
     shrinkSpaces(&values[0]);
 
-    printTable(*table);
-
+    //Determining datatypes
     for(int i = 0; i < table->numCols; i++) {
         char nameCheck[MAX_LEN];
         char* temp;
         strcpy(nameCheck, ", ");
-        strcat(nameCheck, addQuotesToString(table->cols[i].name));
+        char* quoteName = addQuotesToString(table->cols[i].name);
+        strcat(nameCheck, quoteName);
         temp = strstr(values[0], nameCheck);
         if(temp)
             strcpy(currCol, temp);
         else {
             strcpy(nameCheck, "(");
-            strcat(nameCheck, addQuotesToString(table->cols[i].name));
+            strcat(nameCheck, quoteName);
             temp = strstr(values[0], nameCheck);
             if(temp)
                 strcpy(currCol, temp);
@@ -4007,6 +4102,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 if(currCol[strlen(nameCheck)] == ')')
                     temp = NULL;
         }
+        free(quoteName);
         if(temp != NULL) {
             currCol++;
             if(currCol[0] == ' ')
@@ -4052,9 +4148,13 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 *strchr(colName, ')') = '\0';
 
                 char* fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
-                strcpy(fKeyName, removeQuotesFromString(tableName));
+                char* noQuotes = removeQuotesFromString(tableName);
+                strcpy(fKeyName, noQuotes);
+                free(noQuotes);
                 strcat(fKeyName, ".");
-                strcat(fKeyName, removeQuotesFromString(colName));
+                noQuotes = removeQuotesFromString(colName);
+                strcat(fKeyName, noQuotes);
+                free(noQuotes);
 
                 assignColAttrs(&table->cols[i], "F", NULL, fKeyName);
                 free(fKeyName);
@@ -4065,8 +4165,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                 strcpy(defaultTemp, strstr(colAttrs, "DEFAULT ") + 8);
                 if(table->cols[i].type == CHAR) {
                     *(strchr(defaultTemp + 1, '\'') + 1) = '\0';
-                    defaultTemp = removeQuotesFromString(defaultTemp);
-                    table->cols[i].defaultValue.val.CHAR = strdup(defaultTemp);
+                    table->cols[i].defaultValue.val.CHAR = removeQuotesFromString(defaultTemp);
                 }
                 else {
                     if(strchr(defaultTemp, ' ') && strchr(defaultTemp, ',')) {
@@ -4101,6 +4200,7 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
     }
 
     char* temp;
+    //Determining column attributes
     do {
         temp = strstr(values[0], ", PRIMARY KEY(");
         if(!temp) {
@@ -4108,7 +4208,9 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
             if(temp) {
                 char* colName = strdup(strstr(temp, "(") + 1);
                 *strchr(colName, ')') = '\0';
-                strcpy(colName, removeQuotesFromString(colName));
+                char* noQuotes = removeQuotesFromString(colName);
+                strcpy(colName, noQuotes);
+                free(noQuotes);
 
                 int fColInd = 0;
                 Column fCol = nameToCol(table, colName, &fColInd);
@@ -4133,9 +4235,14 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
                         *strchr(tableName, ',') = '\0';
 
                     char* fKeyName = malloc(sizeof(char) * MAX_LEN * 2);
-                    strcpy(fKeyName, removeQuotesFromString(tableName));
+                    noQuotes = removeQuotesFromString(tableName);
+                    strcpy(fKeyName, noQuotes);
+                    free(noQuotes);
+
                     strcat(fKeyName, ".");
-                    strcat(fKeyName, removeQuotesFromString(fColName));
+                    noQuotes = removeQuotesFromString(fColName);
+                    strcat(fKeyName, noQuotes);
+                    free(noQuotes);
 
                     assignColAttrs(&table->cols[fColInd], "F", NULL, fKeyName);
                     free(fKeyName);
@@ -4149,7 +4256,9 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
         else {
             char* colName = strdup(strstr(temp, "(") + 1);
             *strchr(colName, ')') = '\0';
-            strcpy(colName, removeQuotesFromString(colName));
+            char* noQuotes = removeQuotesFromString(colName);
+            strcpy(colName, noQuotes);
+            free(noQuotes);
             Column pCol = nameToCol(table, colName, NULL);
             assignColAttrs(&pCol, "P", NULL, NULL);
             values[0] = temp + 1;
@@ -4164,6 +4273,13 @@ int callbackGetAttributes(void* value, int numCols, char** values, char** colNam
     return 0;
 }
 
+/**
+ * Used to check if a string ends with a certain string.
+ * @param str - The string being checked if it ends with the other parameter.
+ * @param ext - The extension being checked if the other parameter ends with.
+ * @return - 1 if str does end with ext.
+ * @return - 0 if str does not end with ext.
+**/
 int endsWith(char* str, char* ext) {
     int stringLength = strlen(str);
     int extLength = strlen(ext);
@@ -4175,6 +4291,11 @@ int endsWith(char* str, char* ext) {
     return 0;
 }
 
+/**
+ * Takes a string and makes a new string that is wrapped in `single quotes`.
+ * @param string - The string to have quotes added to it.
+ * @return - A copy of the string parameter but with quotes. Must be freed.
+**/
 char* addQuotesToString(char* string) {
 
     char* newString = strdup(string);
@@ -4195,6 +4316,11 @@ char* addQuotesToString(char* string) {
     return newString;
 }
 
+/**
+ * Takes a string and makes a new string that has its first and last characters removed. Good to use to remove quotes from a string.
+ * @param string - The string to have quotes removed to it.
+ * @return - A copy of the string parameter but without its first and last characters. Must be freed.
+**/
 char* removeQuotesFromString(char* string) {
 
     if(!string)
@@ -4213,6 +4339,10 @@ char* removeQuotesFromString(char* string) {
 
 }
 
+/**
+ * Takes a string with numerous spaces in a row and reduces this space to only one space.
+ * @param string - The string to have its space sizes reduced.
+**/
 void shrinkSpaces(char** string) {
 
     char* newString = malloc(sizeof(char) * (strlen(*string) + 1));
@@ -4231,7 +4361,6 @@ void shrinkSpaces(char** string) {
     }
 
     *string = newString;
-
 }
 
 int userTableOperator(int numTables, Table** tables) {
@@ -6608,9 +6737,15 @@ int userTableOperator(int numTables, Table** tables) {
                         }
 
                         if(strcmp(filename, "\\x") != 0) {
-                            printf("Are you sure you want to overwrite the current database? (yes/no): ");
+                            int cont = 1;
+                            if(numTables > 0) {
+                                cont = 0;
+                                printf("Are you sure you want to overwrite the current database? (yes/no): ");
 
-                            if(isYes(yesnoInput())) {
+                                if(isYes(yesnoInput()))
+                                    cont = 1;
+                            }
+                            if(cont) {
                                 Table* newTables;
                                 int numTablesLoaded = importDatabase(filename, &newTables);
 
@@ -6703,6 +6838,7 @@ int userTableOperator(int numTables, Table** tables) {
                         // "2. EXPORT full database to file"
                         char filename[MAX_LEN];
                         int saveChoice;
+                        int trunc = 0;
                         do {
                             saveChoice = 1;
 
@@ -6729,15 +6865,13 @@ int userTableOperator(int numTables, Table** tables) {
                                 } while(saveChoice < 0 || saveChoice > 3);
 
                                 if(saveChoice == 2)
-                                    truncate(filename, 0);
+                                    trunc = 1;
 
                             }
 
                         } while(saveChoice == 3);
 
-                        if(saveChoice != 0)
-                            for(int i = 0; i < numTables; i++)
-                                exportTable((*tables)[i], filename, 0);
+                        exportDatabase(*tables, numTables, filename, trunc);
 
                         printf("\nDatabase saved successfully to %s.\n", filename);
                         break;

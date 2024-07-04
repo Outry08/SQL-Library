@@ -17,7 +17,7 @@ Execute the program with ./cql
 - Valgrind and fix all leaks.
 - Add error return numbers to all functions.
 - Add full library documentation.
-    - Up next: importDatabase
+    - Up next: userTableOperator
 
 - COMPLETE.
 

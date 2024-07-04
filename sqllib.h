@@ -217,6 +217,7 @@ int containsIgnoreCase(char* big, char* small); //Implemented
 **/
 
 void exportTable(Table table, char* fileName, int trunc); //Implemented
+void exportDatabase(Table* tables, int numTables, char* filename, int trunc); //Implemented
 Table* importTable(char* tableName, char* filename); //Implemented
 int importDatabase(char* filename, Table** tables); //Implemented
 int callbackCheckExists(void* value, int numCols, char** values, char** columnNames); //Implemented
