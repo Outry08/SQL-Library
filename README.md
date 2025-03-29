@@ -12,6 +12,8 @@ Run the makefile with 'make' command
 Execute the program with ./cql
 
 ## Visuals
+Text-Based UI Table Operator:
+<img src="tableoperator.png" alt="Table Operator">
 
 ## Roadmap
 - Valgrind and fix most leaks.
