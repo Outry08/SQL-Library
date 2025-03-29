@@ -16,10 +16,10 @@ Text-Based UI Table Operator:
 <img src="tableoperator.png" alt="Table Operator">
 
 ## Roadmap
-- Valgrind and fix most leaks.
-- COMPLETE.
+- v1 COMPLETE
 
 ## Potential Additions At A Later Date
+- Valgrind and fix all leaks.
 - Add join statements.
 - Add DATE datatype functionality.
 - Group By in select statements.
@@ -42,6 +42,7 @@ Text-Based UI Table Operator:
 - Program is slow with larger tables.
 - Foreign Keys are not validated when inserting unless the 'setForeignKey' function is called after a foreign key is added/changed.
 - Faulters if imported string table values are more than 100 characters long.
+- Still leaks memory in places.
 
 ## Project status
-Ongoing.
+v1 Complete
